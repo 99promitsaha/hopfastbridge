@@ -1,10 +1,8 @@
 /**
  * Central guard against the "funds go to a wrong address" class of bugs.
  *
- * History: Relay's /quote/v2 silently substitutes `recipient=0x0` with their
- * own fallback address (0xf3d6…691e). If any provider client forwards a zero
- * or missing recipient, the upstream API may happily quote a route that
- * delivers funds somewhere we don't control.
+ * Missing or zero recipients can produce fallback destinations in upstream APIs.
+ * Never forward them when requesting an executable quote.
  *
  * Rule: every provider must call `assertValidRecipient()` before making an
  * upstream quote request. This refuses zero, missing, or malformed addresses.
@@ -60,7 +58,7 @@ export function assertValidSender(address: string | undefined, label = 'sender')
  *
  * This complements:
  *   - Input guard (`assertValidRecipient`): fail-closed before the request
- *   - Provider-specific response checks (e.g. Relay's `details.recipient`)
+ *   - Provider-specific response checks
  *   - Frontend `useSwapExecution` calldata scan at sign-time
  *
  * The backend-side check specifically matters for non-browser clients (our

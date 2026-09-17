@@ -1,7 +1,7 @@
 # Development phases
 
 ## Phase 1: cleanup and safe agent foundations
-Implemented: remove Earn end to end; retain shared swap resources; compare four route providers with explicit limits; Arc balance; immutable private payment reviews; wallet approval; persistent receipt tracking. Preserve the existing theme.
+Implemented: remove Earn end to end; retain shared swap resources; compare two route providers with explicit limits; Arc balance; immutable private payment reviews; wallet approval; persistent receipt tracking. Preserve the existing theme.
 
 ## Phase 2: funding and complete swap handoffs
 Next: Circle CCTP / Bridge Kit funding into Arc, explicit supported chains and token decimals, browser review links for agent-prepared swaps, recoverable bridge status. Keep swap execution primary. Do not label a bridge complete before destination confirmation.

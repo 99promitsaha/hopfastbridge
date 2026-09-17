@@ -9,7 +9,10 @@ import statsRoutes from './stats.routes.js';
 
 import paymentRoutes from './payments.routes.js';
 
+import priceRoutes from './prices.routes.js';
+
 const router = Router();
+router.use('/', priceRoutes);
 router.use('/', paymentRoutes);
 
 router.use('/', healthRoutes);

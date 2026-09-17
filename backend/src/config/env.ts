@@ -17,15 +17,10 @@ const schema = z.object({
   LIFI_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   LIFI_API_BASE_URL: z.string().default('https://li.quest/v1'),
   LIFI_INTEGRATOR: z.preprocess(emptyToUndefined, z.string().optional()),
-  LIFI_FEE: z.preprocess(emptyToUndefined, z.coerce.number().optional()),
+  LIFI_FEE: z.preprocess(emptyToUndefined, z.coerce.number().min(0).lt(1).optional()),
   LIFI_SLIPPAGE: z.coerce.number().default(0.005),
-  DEBRIDGE_API_BASE_URL: z.string().default('https://dln.debridge.finance'),
-  DEBRIDGE_ACCESS_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
-  DEBRIDGE_REFERRAL_CODE: z.preprocess(emptyToUndefined, z.coerce.number().optional()),
   SQUID_API_BASE_URL: z.string().default('https://v2.api.squidrouter.com'),
   SQUID_INTEGRATOR_ID: z.preprocess(emptyToUndefined, z.string().optional()),
-  RELAY_API_BASE_URL: z.string().default('https://api.relay.link'),
-  RELAY_APP_FEES_RECIPIENT: z.preprocess(emptyToUndefined, z.string().optional()),
   COINGECKO_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   CMC_API_KEY: z.preprocess(emptyToUndefined, z.string().optional())
 });

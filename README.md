@@ -6,11 +6,11 @@ Cross-chain swaps remain the primary offering. The existing visual theme is pres
 
 Use Node 22 or newer. In each of `backend`, `frontend`, and `mcp`, run `npm ci`, copy `.env.example` to `.env` where provided, then run `npm run dev`. The frontend defaults to port 5173, backend to 8080 and MCP HTTP to 3100 (`npm run start:http` after building). Check each environment example for configuration. MongoDB is optional for the payment workflow but required for stored swap history and statistics.
 
-See [API keys](frontend/docs/API-KEYS.md) and [development phases](DEVELOPMENT.md).
+See [API keys](frontend/docs/API-KEYS.md), [providers](PROVIDERS.md), [fees](FEES.md) and [development phases](DEVELOPMENT.md).
 
 ## Current agent functions
 
-- Compare LI.FI, Squid, deBridge and Relay quotes with fee, duration and minimum output constraints. Partial provider failures do not discard working quotes. Arc is not yet a supported swap destination.
+- Compare LI.FI and Squid quotes with fee, duration and minimum output constraints. Partial provider failures do not discard working quotes. Arc is not yet a supported swap destination.
 - Prepare an immutable Arc mainnet USDC payment and return a private review link. The user approves with their wallet. No signing keys are stored by the server or MCP.
 - Verify the sender, recipient, amount and Arc receipt; persist tracking through restarts. RPC outages leave the result unknown and warn against resending.
 

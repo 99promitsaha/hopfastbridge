@@ -25,5 +25,11 @@ try {
  const status=await client.callTool({name:'get_payment_status',arguments:{paymentId:id,accessToken:prepared.accessToken}});assert.ok(!status.isError,JSON.stringify(status));
  response=await fetch(`${base}/api/payments/${id}/cancel`,{method:'POST',headers:{Authorization:`Bearer ${prepared.accessToken}`}});assert.equal((await response.json()).status,'cancelled');
  response=await fetch(`${base}/api/quotes/compare`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({})});assert.equal(response.status,400);
+ for (const provider of ['debridge', 'relay']) {
+   response = await fetch(`${base}/api/quotes?provider=${provider}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) });
+   assert.equal(response.status, 400);
+   const toolResult = await client.callTool({ name: 'get_swap_quote', arguments: { provider, fromChain: 'ethereum', toChain: 'base', fromToken: 'ETH', toToken: 'ETH', amount: '1', walletAddress: detail.walletAddress } });
+   assert.ok(toolResult.isError);
+ }
  console.log('HTTP/MCP smoke passed: 11 tools, payment preparation/read/cancel, capability enforcement, quote input validation.');
 }finally{await client.close();await server.close();listener.close();rmSync(folder,{recursive:true,force:true});}

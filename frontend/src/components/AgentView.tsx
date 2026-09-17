@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bot, Check, Copy, Shield, Terminal, Zap } from 'lucide-react';
 const tools = [
-  ['compare_swap_routes', 'Compare four providers with fee, duration and minimum-output limits.'],
+  ['compare_swap_routes', 'Compare two providers with fee, duration and minimum-output limits.'],
   ['get_swap_quote', 'Request one provider’s executable swap quote.'],
   ['get_transaction_status', 'Check provider and on-chain swap status.'],
   ['get_transaction_history', 'Read recorded wallet swap history.'],

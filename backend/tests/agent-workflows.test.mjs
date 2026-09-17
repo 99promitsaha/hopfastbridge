@@ -32,11 +32,14 @@ test('native Arc amount conversion is exact at 18 decimals', () => {
   for (const value of ['0', '-1', '1e3', '1.0000000000000000001', 'NaN', '']) assert.throws(() => parseUsdc(value));
 });
 test('comparison keeps precision beyond Number.MAX_SAFE_INTEGER and tolerates provider failure', async () => {
-  const result = await compareRoutes(async p => {
-    if (p === 'relay') throw new Error('offline');
-    return { provider: p, quotes: [quote(p === 'lifi' ? '9007199254740993' : '9007199254740992')] };
-  }, ['squid', 'lifi', 'relay'], {});
-  assert.equal(result.best.provider, 'lifi'); assert.equal(result.unavailable[0].provider, 'relay');
+  const request = async p => ({ provider: p, quotes: [quote(p === 'lifi' ? '9007199254740993' : '9007199254740992')] });
+  const ranked = await compareRoutes(request, ['squid', 'lifi'], {});
+  assert.equal(ranked.best.provider, 'lifi');
+  const partial = await compareRoutes(async p => {
+    if (p === 'squid') throw new Error('offline');
+    return request(p);
+  }, ['squid', 'lifi'], {});
+  assert.equal(partial.best.provider, 'lifi'); assert.equal(partial.unavailable[0].provider, 'squid');
 });
 test('comparison excludes routes violating fee, duration or guaranteed-output constraints', async () => {
   const result = await compareRoutes(async p => ({ provider: p, quotes: [quote('100', '2', '90')] }), ['lifi'], { maxFeeUsd: 1, maxEtaSeconds: 10, minDestinationAmount: '95' });

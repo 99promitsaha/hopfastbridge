@@ -14,12 +14,9 @@ export interface QuoteRequest {
 
 export interface QuoteResult {
   id: string;
-  provider: 'lifi-api' | 'debridge-api' | 'squid-api' | 'relay-api' | 'mock';
+  provider: 'lifi-api' | 'squid-api' | 'mock';
   route: string;
   feeUsd: number;
-  /** Native fixed-fee component for deBridge DLN (the `fixFee` msg.value amount in USD).
-   *  Present and > 0 only for deBridge quotes. The route/spread fee is `feeUsd - fixFeeUsd`. */
-  fixFeeUsd?: number;
   feePercent: number;
   etaSeconds: number;
   destinationAmount: string;
@@ -111,7 +108,7 @@ async function fetchQuoteFromBackend(payload: Record<string, unknown>, provider:
 
 export async function getSwapQuote(
   request: QuoteRequest,
-  provider: 'lifi' | 'debridge' | 'squid' | 'relay' = 'lifi'
+  provider: 'lifi' | 'squid' = 'lifi'
 ): Promise<QuoteResult> {
   if (request.fromChain === request.toChain && request.fromTokenSymbol === request.toTokenSymbol) {
     throw new Error('Source and destination tokens must be different for a same-chain swap.');
@@ -146,16 +143,15 @@ export async function getSwapQuote(
 
   try {
     const data = (await fetchQuoteFromBackend(payload, provider)) as {
-      provider?: 'lifi' | 'debridge' | 'squid' | 'relay';
+      provider?: 'lifi' | 'squid';
       fallbackUsed?: boolean;
       fallbackFrom?: string;
       warnings?: string[];
       quotes?: Array<{
         id: string;
-        provider?: 'lifi' | 'debridge' | 'squid' | 'relay';
+        provider?: 'lifi' | 'squid';
         routeSteps?: Array<{ type?: string }>;
         feeUsd?: string;
-        fixFeeUsd?: string;
         feePercent?: string;
         duration?: { estimated?: string | null };
         dstAmount?: string;
@@ -201,13 +197,11 @@ export async function getSwapQuote(
       maxPriorityFeePerGas: rawTx.maxPriorityFeePerGas,
     } : undefined;
 
-    const rawFixFee = numberFromUnknown(quote.fixFeeUsd, 0);
     return {
       id: quote.id,
-      provider: provider === 'debridge' ? 'debridge-api' : provider === 'squid' ? 'squid-api' : provider === 'relay' ? 'relay-api' : 'lifi-api',
+      provider: provider === 'squid' ? 'squid-api' : 'lifi-api',
       route,
       feeUsd: numberFromUnknown(quote.feeUsd, 0),
-      fixFeeUsd: rawFixFee > 0 ? rawFixFee : undefined,
       feePercent: numberFromUnknown(quote.feePercent, 0),
       etaSeconds: Math.max(15, Math.round(etaMilliseconds / 1000)),
       destinationAmount: parseAmountFromQuote(quote.dstAmount, toToken.decimals),

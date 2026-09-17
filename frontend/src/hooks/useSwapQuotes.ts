@@ -30,7 +30,7 @@ export function useSwapQuotes(activeWalletAddress: string | null) {
   // debounce effect to detect "amount was changed programmatically by a path
   // that already called triggerFetchImmediate" and skip the otherwise-duplicate
   // debounced round. Without this, MAX / 50% / Fit gas / swap-direction each
-  // fire *two* quote rounds across all 4 providers, which both wastes upstream
+  // fire *two* quote rounds across both providers, which both wastes upstream
   // credit and trips Squid's 429 rate limiter.
   const lastFetchedAmountRef = useRef<string | null>(null);
 
@@ -53,7 +53,7 @@ export function useSwapQuotes(activeWalletAddress: string | null) {
     }
 
     // Safety: never request a quote without a wallet. Backend guards against
-    // zero-address recipients (Relay/LI.FI/Squid APIs can silently substitute
+    // zero-address recipients (LI.FI/Squid APIs can silently substitute
     // a fallback wallet when recipient=0x0), so pre-connect quoting would 400.
     // Show an empty quote panel and let the Connect button lead the UX instead.
     if (!activeWalletAddress) {

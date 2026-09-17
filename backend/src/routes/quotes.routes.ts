@@ -4,9 +4,7 @@ import { validAddress } from '../lib/arc.js';
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { requestLiFiQuote } from '../lib/lifiClient.js';
-import { requestDebridgeQuote } from '../lib/debridgeClient.js';
 import { requestSquidQuote } from '../lib/squidClient.js';
-import { requestRelayQuote } from '../lib/relayClient.js';
 import { env } from '../config/env.js';
 
 const router = Router();
@@ -24,8 +22,6 @@ const quoteLimiter = rateLimit({
 type Payload = Parameters<typeof requestLiFiQuote>[0];
 export async function requestProvider(provider: Provider, payload: Payload): Promise<QuoteResponse> {
   if (provider === 'squid') return requestSquidQuote(payload);
-  if (provider === 'debridge') return requestDebridgeQuote(payload);
-  if (provider === 'relay') return requestRelayQuote(payload);
   return requestLiFiQuote(payload);
 }
 const chain = z.enum(['ethereum', 'base', 'bsc', 'polygon', 'monad']);
@@ -34,7 +30,7 @@ const comparisonSchema = z.object({
   srcTokenAddress: z.string().regex(/^0x[\da-fA-F]{40}$/), dstTokenAddress: z.string().regex(/^0x[\da-fA-F]{40}$/),
   srcWalletAddress: z.string().refine(validAddress), dstWalletAddress: z.string().refine(validAddress).optional(),
   amount: z.string().regex(/^\d+$/).max(78).refine(value => BigInt(value) > 0n && BigInt(value) < 2n ** 256n),
-  providers: z.array(z.enum(['lifi', 'squid', 'debridge', 'relay'])).min(1).max(4).optional(),
+  providers: z.array(z.enum(['lifi', 'squid'])).min(1).max(2).optional(),
   maxFeeUsd: z.number().finite().nonnegative().optional(), maxEtaSeconds: z.number().finite().positive().optional(),
   minDestinationAmount: z.string().regex(/^\d+$/).max(78).optional()
 });
@@ -50,7 +46,7 @@ router.post('/quotes/compare', quoteLimiter, async (req, res) => {
 
 router.post('/quotes', quoteLimiter, async (req, res) => {
   const requestedProvider = typeof req.query.provider === 'string' ? req.query.provider.toLowerCase() : undefined;
-  const supportedProviders = ['lifi', 'debridge', 'squid', 'relay'] as const;
+  const supportedProviders = ['lifi', 'squid'] as const;
 
   if (requestedProvider && !supportedProviders.includes(requestedProvider as (typeof supportedProviders)[number])) {
     return res.status(400).json({
@@ -69,21 +65,7 @@ router.post('/quotes', quoteLimiter, async (req, res) => {
   }
 
   try {
-    let quote:
-      | Awaited<ReturnType<typeof requestLiFiQuote>>
-      | Awaited<ReturnType<typeof requestDebridgeQuote>>
-      | Awaited<ReturnType<typeof requestSquidQuote>>
-      | Awaited<ReturnType<typeof requestRelayQuote>>;
-
-    if (provider === 'debridge') {
-      quote = await requestDebridgeQuote(req.body);
-    } else if (provider === 'squid') {
-      quote = await requestSquidQuote(req.body);
-    } else if (provider === 'relay') {
-      quote = await requestRelayQuote(req.body);
-    } else {
-      quote = await requestLiFiQuote(req.body);
-    }
+    const quote = await requestProvider(provider as Provider, req.body);
 
     return res.json(quote);
   } catch (error) {

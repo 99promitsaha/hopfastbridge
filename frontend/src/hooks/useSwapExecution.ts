@@ -162,12 +162,8 @@ export function useSwapExecution(
       const txParams: Record<string, unknown> = {
         from: walletBridge.address,
         to: bestQuote.transactionRequest.to,
-        // Base Builder Code earns on Base only. Additionally, deBridge DLN
-        // creates an on-chain order by hashing calldata — extra trailing bytes
-        // corrupt the order hash regardless of source chain, so skip for deBridge.
-        data: bestQuote.provider !== 'debridge-api'
-          ? appendBuilderCodeForChain(bestQuote.transactionRequest.data, fromChainId)
-          : (bestQuote.transactionRequest.data ?? '0x'),
+        // Base Builder Code attribution applies on Base only.
+        data: appendBuilderCodeForChain(bestQuote.transactionRequest.data, fromChainId),
         value: toHexQuantity(bestQuote.transactionRequest.value) ?? '0x0',
       };
 

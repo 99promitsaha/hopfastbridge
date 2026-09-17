@@ -383,8 +383,6 @@ export function SwapView({
             Powered by
             <img src="/providers/lifi.png" alt="LI.FI" className="hf-provider-powered-logo" />
             <img src="/providers/squid.ico" alt="Squid" className="hf-provider-powered-logo" />
-            <img src="/providers/debridge.png" alt="deBridge" className="hf-provider-powered-logo" />
-            <img src="/providers/relay.png" alt="Relay" className="hf-provider-powered-logo" />
           </div>
 
           {/* Quote Refresh Countdown */}
@@ -765,7 +763,7 @@ export function SwapView({
                     // Allow selection whenever a quote is displayed. Previously
                     // `!pLoading` gated this, which silently dropped clicks on
                     // whichever provider was still re-quoting during the 60 s
-                    // refresh — consistently Relay in practice, because it
+                    // refresh.
                     // resolves last. A background refresh shouldn't block the
                     // user's intent to pick a provider they can already see.
                     const canSelect = pQuote != null;
@@ -825,36 +823,10 @@ export function SwapView({
                               transition={{ duration: 0.2, ease: 'easeInOut' }}
                             >
                               <div className="hf-route-detail-rows">
-                                {/* deBridge: split fee */}
-                                {key === 'debridge' && pQuote.fixFeeUsd != null && pQuote.fixFeeUsd > 0 ? (
-                                  <>
-                                    <div className="hf-route-detail-row">
-                                      <span>Route spread</span>
-                                      <span>{formatUsd(Math.max(0, pQuote.feeUsd - pQuote.fixFeeUsd))}</span>
-                                    </div>
-                                    <div className="hf-route-detail-row">
-                                      <span className="hf-fee-label--with-icon">
-                                        DLN solver fee
-                                        <span className="hf-fee-info-icon">
-                                          <Info size={9} />
-                                          <span className="hf-tooltip">
-                                            Fixed solver fee charged in the source chain's native token (e.g. ETH). Paid on top of your swap, doesn't reduce what you receive on the destination.
-                                          </span>
-                                        </span>
-                                      </span>
-                                      <span>{formatUsd(pQuote.fixFeeUsd)}</span>
-                                    </div>
-                                    <div className="hf-route-detail-row hf-route-detail-row--total">
-                                      <span>Total fee</span>
-                                      <span>{formatUsd(pQuote.feeUsd)}</span>
-                                    </div>
-                                  </>
-                                ) : (
-                                  <div className="hf-route-detail-row">
-                                    <span>Fee</span>
-                                    <span>{formatUsd(pQuote.feeUsd)} ({pQuote.feePercent > 0 ? `${pQuote.feePercent.toFixed(2)}%` : '<0.01%'})</span>
-                                  </div>
-                                )}
+                                <div className="hf-route-detail-row">
+                                  <span>Fee</span>
+                                  <span>{formatUsd(pQuote.feeUsd)} ({pQuote.feePercent > 0 ? `${pQuote.feePercent.toFixed(2)}%` : '<0.01%'})</span>
+                                </div>
                                 {pQuote.destinationAmountMin && (
                                   <div className="hf-route-detail-row">
                                     <span>Min. received</span>
@@ -889,23 +861,9 @@ export function SwapView({
 
               {bestQuote && !isQuoting && (
                 <div className="hf-fee-summary hf-fadeup">
-                  {bestQuote.fixFeeUsd != null && bestQuote.fixFeeUsd > 0 && (
-                    <div className="hf-fee-row">
-                      <span className="hf-fee-label hf-fee-label--with-icon">
-                        DLN solver fee
-                        <span className="hf-fee-info-icon">
-                          <Info size={9} />
-                          <span className="hf-tooltip">
-                            Fixed solver fee charged in the source chain's native token (e.g. ETH). Paid on top of your swap, doesn't reduce what you receive on the destination.
-                          </span>
-                        </span>
-                      </span>
-                      <span className="hf-fee-value">{formatUsd(bestQuote.fixFeeUsd)}</span>
-                    </div>
-                  )}
                   <div className="hf-fee-row">
-                    <span className="hf-fee-label">HopFast fee</span>
-                    <span className="hf-fee-value hf-fee-free">Free <Check size={10} strokeWidth={3} /></span>
+                    <span className="hf-fee-label">Service fees</span>
+                    <span className="hf-fee-value">Included in route estimate</span>
                   </div>
                   <div className="hf-fee-row">
                     <span className="hf-fee-label">Min. received</span>

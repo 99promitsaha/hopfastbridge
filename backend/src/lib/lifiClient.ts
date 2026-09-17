@@ -135,7 +135,7 @@ export async function requestLiFiQuote(payload: UnifiedQuotePayload): Promise<{
   }
 
   // Fail closed if wallet not connected — never send a zero recipient to
-  // upstream APIs (Relay's /quote/v2 silently remaps 0x0 → a house wallet).
+  // upstream APIs, which may substitute a fallback recipient.
   const fromAddress = assertValidSender(payload.srcWalletAddress, 'srcWalletAddress');
   const toAddress = assertValidRecipient(payload.dstWalletAddress ?? payload.srcWalletAddress, 'dstWalletAddress');
 

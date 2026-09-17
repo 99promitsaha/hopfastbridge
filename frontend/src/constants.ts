@@ -19,13 +19,11 @@ export const HISTORY_LIMIT = 50;
 export const API_BASE_URL =
   (import.meta.env.VITE_HOPFAST_API_BASE_URL ?? '').replace(/\/$/, '') || 'http://localhost:8080/api';
 
-export const LIVE_PROVIDERS: ProviderKey[] = ['lifi', 'squid', 'debridge', 'relay'];
+export const LIVE_PROVIDERS: ProviderKey[] = ['lifi', 'squid'];
 
 export const PROVIDER_META: { key: ProviderKey; label: string; logo: string }[] = [
   { key: 'lifi',     label: 'LI.FI',    logo: '/providers/lifi.png'     },
   { key: 'squid',    label: 'Squid',     logo: '/providers/squid.ico'    },
-  { key: 'debridge', label: 'deBridge',  logo: '/providers/debridge.png' },
-  { key: 'relay',    label: 'Relay',     logo: '/providers/relay.png'    },
 ];
 
 export const BLOCK_EXPLORER: Record<ChainKey, string> = {
