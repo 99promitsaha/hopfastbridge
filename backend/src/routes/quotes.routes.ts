@@ -1,3 +1,6 @@
+import { z } from 'zod';
+import { providers, compareRoutes, type Provider, type QuoteResponse } from '../lib/routeComparison.js';
+import { validAddress } from '../lib/arc.js';
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { requestLiFiQuote } from '../lib/lifiClient.js';
@@ -16,6 +19,33 @@ const quoteLimiter = rateLimit({
   legacyHeaders: false,
   skip: () => env.NODE_ENV === 'development',
   message: { error: 'Too many quote requests. Please wait a moment before trying again.' }
+});
+
+type Payload = Parameters<typeof requestLiFiQuote>[0];
+export async function requestProvider(provider: Provider, payload: Payload): Promise<QuoteResponse> {
+  if (provider === 'squid') return requestSquidQuote(payload);
+  if (provider === 'debridge') return requestDebridgeQuote(payload);
+  if (provider === 'relay') return requestRelayQuote(payload);
+  return requestLiFiQuote(payload);
+}
+const chain = z.enum(['ethereum', 'base', 'bsc', 'polygon', 'monad']);
+const comparisonSchema = z.object({
+  srcChainKey: chain, dstChainKey: chain,
+  srcTokenAddress: z.string().regex(/^0x[\da-fA-F]{40}$/), dstTokenAddress: z.string().regex(/^0x[\da-fA-F]{40}$/),
+  srcWalletAddress: z.string().refine(validAddress), dstWalletAddress: z.string().refine(validAddress).optional(),
+  amount: z.string().regex(/^\d+$/).max(78).refine(value => BigInt(value) > 0n && BigInt(value) < 2n ** 256n),
+  providers: z.array(z.enum(['lifi', 'squid', 'debridge', 'relay'])).min(1).max(4).optional(),
+  maxFeeUsd: z.number().finite().nonnegative().optional(), maxEtaSeconds: z.number().finite().positive().optional(),
+  minDestinationAmount: z.string().regex(/^\d+$/).max(78).optional()
+});
+router.post('/quotes/compare', quoteLimiter, async (req, res) => {
+  const parsed = comparisonSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: 'Invalid comparison request. Include a nonzero payer, supported chains, and positive base-unit amount.' });
+  const input = parsed.data;
+  const payload = { ...input, dstWalletAddress: input.dstWalletAddress ?? input.srcWalletAddress };
+  const requested = [...new Set(input.providers ?? providers)];
+  const result = await compareRoutes(provider => requestProvider(provider, payload), requested, input);
+  return res.json({ ...result, observedAt: new Date().toISOString(), warning: 'Estimates can change before signing. Arc funding routes are not enabled in this comparison endpoint yet.' });
 });
 
 router.post('/quotes', quoteLimiter, async (req, res) => {

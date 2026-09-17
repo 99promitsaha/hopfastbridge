@@ -68,7 +68,7 @@ export function LandingView({ onHumanClick, onAgentClick }: LandingViewProps) {
           <span>at light speed 🐰</span>
         </h1>
         <p className="hf-hero-sub">
-          Cross-Chain Swap & Yield Aggregator
+          Cross-Chain Swaps. Agent-ready payments.
         </p>
       </div>
 
@@ -77,7 +77,7 @@ export function LandingView({ onHumanClick, onAgentClick }: LandingViewProps) {
         <button className="hf-role-card" onClick={onHumanClick}>
           <div>
             <p className="hf-role-title">Human</p>
-            <p className="hf-role-sub">Swap. Earn. All in one hop 🐇</p>
+            <p className="hf-role-sub">Swap across chains. All in one hop 🐇</p>
           </div>
           <span className="hf-role-icon">
             <UserRound size={18} />
@@ -104,7 +104,7 @@ export function LandingView({ onHumanClick, onAgentClick }: LandingViewProps) {
           ))}
         </span>
         <span className="hf-trust-sep">·</span>
-        <span><span className="hf-trust-volume">{displayVolume != null ? formatVolume(displayVolume) : '—'}</span> Swapped All-Time At ZERO Protocol-Fees.</span>
+        <span><span className="hf-trust-volume">{displayVolume != null ? formatVolume(displayVolume) : '—'}</span> in recorded swaps.</span>
       </div>
     </motion.main>
   );

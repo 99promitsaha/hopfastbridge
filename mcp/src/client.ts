@@ -27,6 +27,7 @@ export async function hopfastFetch<T>(
 
   const response = await fetch(url, {
     ...options,
+    signal: options?.signal ?? AbortSignal.timeout(30000),
     headers: {
       'Content-Type': 'application/json',
       ...(options?.headers ?? {}),

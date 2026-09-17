@@ -40,8 +40,7 @@ function getWalletAddress(user: unknown): string | null {
 /**
  * Hook to access Privy auth state.
  * Always call unconditionally (React rules of hooks).
- * When Privy is not configured, the PrivyProvider still wraps the app,
- * so usePrivy() is always safe to call.
+ * Only call this hook inside the authenticated app wrapped in PrivyProvider.
  */
 export function usePrivyAuth() {
   const privy = usePrivy();

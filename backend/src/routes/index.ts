@@ -5,10 +5,12 @@ import swapsRoutes from './swaps.routes.js';
 import transactionsRoutes from './transactions.routes.js';
 import walletsRoutes from './wallets.routes.js';
 import statusRoutes from './status.routes.js';
-import earnRoutes from './earn.routes.js';
 import statsRoutes from './stats.routes.js';
 
+import paymentRoutes from './payments.routes.js';
+
 const router = Router();
+router.use('/', paymentRoutes);
 
 router.use('/', healthRoutes);
 router.use('/', quotesRoutes);
@@ -16,7 +18,6 @@ router.use('/', swapsRoutes);
 router.use('/', transactionsRoutes);
 router.use('/', walletsRoutes);
 router.use('/', statusRoutes);
-router.use('/', earnRoutes);
 router.use('/', statsRoutes);
 
 export default router;

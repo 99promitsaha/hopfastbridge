@@ -72,94 +72,16 @@ const SUPPORTED_CHAINS = [
   },
 ];
 
-const AGENT_GUIDE = `# HopFast Agent Guide
+const AGENT_GUIDE = `# Hopfastbridge Agent Guide
 
-HopFast is a DeFi aggregator that lets users swap tokens across 5 blockchains
-and earn yield in DeFi vaults. This guide explains how to use HopFast as an agent.
-
----
-
-## Authentication
-HopFast uses **wallet-based identity** — no username/password.
-Every action is tied to a wallet address (0x...). You need the user's wallet
-address to perform personalised operations.
-
----
-
-## Supported Chains
-| Chain     | Key        | Chain ID |
-|-----------|------------|----------|
-| Ethereum  | ethereum   | 1        |
-| Base      | base       | 8453     |
-| BNB Chain | bsc        | 56       |
-| Polygon   | polygon    | 137      |
-| Monad     | monad      | 143      |
-
----
-
-## Core Workflows
-
-### 1. Cross-Chain Swap
-**Goal:** Swap token A on chain X to token B on chain Y.
-
-Steps:
-1. Call \`register_wallet\` with the user's wallet address.
-2. Call \`get_swap_quote\` with fromChain, toChain, fromToken, toToken, amount (in wei), and walletAddress.
-3. Present the quote to the user: show destination amount, fees, and estimated time.
-4. Ask the user to sign and broadcast the \`transactionRequest\` from the quote using their wallet.
-5. Call \`record_transaction\` with the returned txHash.
-6. Poll \`get_transaction_status\` every 15–30 seconds until status is "completed" or "failed".
-
-### 2. Earn Yield
-**Goal:** Help a user deposit tokens into a DeFi vault.
-
-Steps:
-1. Call \`get_user_preferences\` to check if the user has set yield preferences.
-   - If not, ask for their risk appetite and experience level, then call \`save_user_preferences\`.
-2. Call \`get_earn_vaults\` with appropriate filters based on preferences.
-3. Present top vault options (APY, TVL, protocol, token).
-4. Once user picks a vault, call \`get_earn_quote\` with the vault details and user wallet.
-5. Present quote (fees, ETA, expected vault tokens).
-6. Ask the user to sign and send the deposit transaction.
-7. Call \`record_earn_deposit\` with transaction details after confirmation.
-
-### 3. Portfolio Review
-**Goal:** Show a user what they have in HopFast.
-
-Steps:
-1. Call \`get_transaction_history\` to show swap history.
-2. Call \`get_earn_positions\` to show active vault deposits.
-
----
-
-## Amount Formatting
-- Amounts in API calls must be in the **smallest token unit** (wei).
-- USDC/USDT (6 decimals): 1 token = "1000000"
-- ETH/most ERC-20 (18 decimals): 1 token = "1000000000000000000"
-- WBTC (8 decimals): 1 token = "100000000"
-
-Use this formula: \`amount_in_wei = human_amount * 10^decimals\`
-
----
-
-## Token Addresses
-- For **native tokens** (ETH, BNB, POL, MON) use: \`0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE\`
-- For ERC-20s, use the contract address on the specific chain.
-- Read the \`hopfast://chains\` resource for popular token addresses per chain.
-
----
-
-## Error Handling
-- If \`get_swap_quote\` fails, try a different \`provider\` (lifi → squid → debridge).
-- If transaction status stays "confirming" for >10 minutes, inform the user and suggest checking the explorerLink.
-- Rate limits: quote endpoints are limited. Wait 2 seconds between retries.
-
----
-
-## What Agents Cannot Do
-- Agents cannot sign transactions — only the user's wallet can sign.
-- Agents cannot move funds without the user's explicit wallet signature.
-- The \`transactionRequest\` in quote responses is a payload that MUST be signed by the user's wallet key.
+Compare supported swap routes, prepare user-approved Arc payments, and check receipts.
+Never ask for a private key. An address identifies a wallet; it does not prove ownership.
+Use compare_swap_routes for actual provider comparison. get_swap_quote defaults to LI.FI.
+Amounts for swap tools are integer strings in each token's smallest unit. Read hopfast://chains; decimals vary by chain, including stablecoins.
+Arc payment tools accept decimal USDC strings. Native Arc USDC uses 18 decimals.
+prepare_arc_payment returns a browser review URL and private access token. Show the amount, recipient, and network before opening it. User signs in a wallet. The request remains pending until its on-chain transaction is verified.
+Use get_payment_status with the payment ID and token to resume tracking. Do not report success from a submitted hash alone. RPC failures mean unknown, not failed.
+The HTTP server has no built-in model, autonomous signer, or delegated spending permissions.
 `;
 
 export function registerResources(server: McpServer): void {

@@ -6,8 +6,8 @@
  */
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerPaymentTools } from './tools/payments.js';
 import { registerSwapTools } from './tools/swap.js';
-import { registerEarnTools } from './tools/earn.js';
 import { registerWalletTools } from './tools/wallet.js';
 import { registerResources } from './resources/index.js';
 import { registerPrompts } from './prompts/index.js';
@@ -20,7 +20,7 @@ export function createHopFastMcpServer(): McpServer {
 
   // Register all capabilities
   registerSwapTools(server);
-  registerEarnTools(server);
+  registerPaymentTools(server);
   registerWalletTools(server);
   registerResources(server);
   registerPrompts(server);

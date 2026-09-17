@@ -170,6 +170,7 @@ export async function requestRelayQuote(payload: UnifiedQuotePayload): Promise<{
   }
 
   const response = await fetch(`${RELAY_API}/quote/v2`, {
+    signal: AbortSignal.timeout(20000),
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)

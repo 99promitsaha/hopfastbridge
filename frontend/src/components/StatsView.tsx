@@ -9,8 +9,6 @@ interface StatsData {
   uniqueUsers: number;
   swapVolumeUsd: number;
   swapCount: number;
-  earnDepositCount: number;
-  earnDepositsByToken: { symbol: string; total: string; count: number }[];
   protocolFeeUsd: number;
 }
 
@@ -90,11 +88,6 @@ export function StatsView({ onBack }: Props) {
               <p className="hf-stat-card-value">{formatUsd(data.swapVolumeUsd)}</p>
               <p className="hf-stat-card-sub">{data.swapCount.toLocaleString()} swaps</p>
             </div>
-            <div className="hf-stat-card">
-              <p className="hf-stat-card-label">Vault Deposits</p>
-              <p className="hf-stat-card-value">{data.earnDepositCount.toLocaleString()}</p>
-              <p className="hf-stat-card-sub">total transactions</p>
-            </div>
             <div className="hf-stat-card hf-stat-card-free">
               <p className="hf-stat-card-label">Protocol Fee</p>
               <p className="hf-stat-card-value">$0</p>
@@ -102,23 +95,8 @@ export function StatsView({ onBack }: Props) {
             </div>
           </div>
 
-          {data.earnDepositsByToken.length > 0 && (
-            <div className="hf-stats-section">
-              <p className="hf-stats-section-title">Assets Deposited into Vaults</p>
-              <div className="hf-stats-token-list">
-                {data.earnDepositsByToken.map((t) => (
-                  <div key={t.symbol} className="hf-stats-token-row">
-                    <span className="hf-stats-token-symbol">{t.symbol}</span>
-                    <span className="hf-stats-token-amount">{Number(t.total).toLocaleString(undefined, { maximumFractionDigits: 4 })}</span>
-                    <span className="hf-stats-token-count">{t.count} deposit{t.count !== 1 ? 's' : ''}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           <p className="hf-stats-note">
-            Data reflects activity recorded through HopFast. Swap volume is sourced from executed transactions. Vault deposits reflect amounts deposited via HopFast only.
+            Data reflects activity recorded through HopFast. Swap records are self-reported and are not independently verified platform volume.
           </p>
         </>
       )}

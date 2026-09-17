@@ -43,10 +43,8 @@ It's safe to call multiple times — it's idempotent (upsert).`,
     `Get aggregated HopFast protocol statistics for a given time period.
 Returns:
 - uniqueUsers: number of distinct wallets that used HopFast
-- swapVolumeUsd: total USD value of swaps executed
+- swapVolumeUsd: self-reported USD value of recorded swaps
 - swapCount: total number of swap transactions
-- earnDepositCount: number of vault deposits
-- earnDepositsByToken: breakdown of deposits by token symbol
 - protocolFeeUsd: protocol fees collected
 
 Use for reporting, analytics, or when users ask about HopFast's activity.`,

@@ -274,7 +274,8 @@ export async function requestDebridgeQuote(
   }
 
   const response = await fetch(`${env.DEBRIDGE_API_BASE_URL}/v1.0/dln/order/create-tx?${params.toString()}`, {
-    method: 'GET'
+    method: 'GET',
+    signal: AbortSignal.timeout(20000)
   });
 
   const text = await response.text();
@@ -393,7 +394,7 @@ async function requestDebridgeSingleChainQuote(
 
   const response = await fetch(
     `${env.DEBRIDGE_API_BASE_URL}/v1.0/chain/transaction?${params.toString()}`,
-    { method: 'GET' }
+    { method: 'GET', signal: AbortSignal.timeout(20000) }
   );
 
   const text = await response.text();

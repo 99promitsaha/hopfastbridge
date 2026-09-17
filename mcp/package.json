@@ -1,7 +1,7 @@
 {
   "name": "@hopfast/mcp",
   "version": "0.1.0",
-  "description": "HopFast MCP Server — let AI agents swap tokens, earn yield, and track DeFi positions across 5 blockchains",
+  "description": "Hopfastbridge MCP tools for swap routing and user-approved Arc payments",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
@@ -11,7 +11,8 @@
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "start:http": "node dist/index.js --http"
+    "start:http": "node dist/index.js --http",
+    "test": "npm run build && node tests/workflows.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.12.0",
@@ -31,7 +32,8 @@
     "crypto",
     "cross-chain",
     "swap",
-    "yield",
-    "hopfast"
+    "hopfast",
+    "arc",
+    "payments"
   ]
 }

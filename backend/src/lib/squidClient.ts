@@ -150,6 +150,7 @@ export async function requestSquidQuote(payload: UnifiedQuotePayload): Promise<{
   }
 
   const response = await fetch(`${env.SQUID_API_BASE_URL}/v2/route`, {
+    signal: AbortSignal.timeout(20000),
     method: 'POST',
     headers,
     body: JSON.stringify(body)

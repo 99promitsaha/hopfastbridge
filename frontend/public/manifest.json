@@ -1,7 +1,7 @@
 {
   "name": "HopFast",
   "short_name": "HopFast",
-  "description": "Cross-Chain Swap & Yield Aggregator",
+  "description": "Cross-chain swaps and user-approved Arc payments",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

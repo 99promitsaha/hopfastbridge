@@ -3,5 +3,3 @@ Allow: /
 
 # Block access to raw build assets — no useful content for crawlers
 Disallow: /assets/
-
-Sitemap: https://www.hopfast.xyz/sitemap.xml

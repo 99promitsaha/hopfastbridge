@@ -164,6 +164,7 @@ export async function requestLiFiQuote(payload: UnifiedQuotePayload): Promise<{
   }
 
   const response = await fetch(`${env.LIFI_API_BASE_URL}/quote?${params.toString()}`, {
+    signal: AbortSignal.timeout(20000),
     method: 'GET',
     headers
   });

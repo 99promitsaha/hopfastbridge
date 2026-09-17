@@ -84,7 +84,7 @@ async function startHttp(): Promise<void> {
     await transport.handleRequest(req, res);
   });
 
-  httpServer.listen(HTTP_PORT, () => {
+  httpServer.listen(HTTP_PORT, '127.0.0.1', () => {
     console.log(
       `[HopFast MCP] HTTP transport listening on http://localhost:${HTTP_PORT}/mcp`,
     );

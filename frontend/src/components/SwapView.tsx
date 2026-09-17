@@ -45,9 +45,6 @@ interface SwapViewProps {
   onBack: () => void;
   onToggleHistory: () => void;
   onTxStatusClear: () => void;
-  /** Show a note that destination was prefilled from Earn "Get more" flow */
-  prefillNote?: boolean;
-  onPrefillNoteDismiss?: () => void;
 }
 
 export function SwapView({
@@ -59,7 +56,6 @@ export function SwapView({
   walletBridge, activeWalletAddress,
   isExecuting, txStatus, error,
   executeSwap, onBack, onToggleHistory, onTxStatusClear,
-  prefillNote, onPrefillNoteDismiss,
 }: SwapViewProps) {
   const [showFromChainModal, setShowFromChainModal] = useState(false);
   const [showToChainModal, setShowToChainModal] = useState(false);
@@ -383,12 +379,12 @@ export function SwapView({
           </button>
 
           <h3 className="hf-swap-title">Hop. <span>At Light Speed 🐰</span></h3>
-          <div className="hf-earn-powered">
+          <div className="hf-provider-powered">
             Powered by
-            <img src="/providers/lifi.png" alt="LI.FI" className="hf-earn-powered-logo" />
-            <img src="/providers/squid.ico" alt="Squid" className="hf-earn-powered-logo" />
-            <img src="/providers/debridge.png" alt="deBridge" className="hf-earn-powered-logo" />
-            <img src="/providers/relay.png" alt="Relay" className="hf-earn-powered-logo" />
+            <img src="/providers/lifi.png" alt="LI.FI" className="hf-provider-powered-logo" />
+            <img src="/providers/squid.ico" alt="Squid" className="hf-provider-powered-logo" />
+            <img src="/providers/debridge.png" alt="deBridge" className="hf-provider-powered-logo" />
+            <img src="/providers/relay.png" alt="Relay" className="hf-provider-powered-logo" />
           </div>
 
           {/* Quote Refresh Countdown */}
@@ -528,16 +524,6 @@ export function SwapView({
               </button>
             </div>
 
-            {/* Prefill note from Earn flow */}
-            {prefillNote && (
-              <div className="hf-prefill-note">
-                <span>Your desired asset has been pre-filled below.</span>
-                <button type="button" className="hf-prefill-note-dismiss" onClick={onPrefillNoteDismiss}>
-                  <X size={12} />
-                </button>
-              </div>
-            )}
-
             {/* You Receive */}
             <div className="hf-field-group hf-field-group--bottom">
               <div className="hf-field-header">
@@ -574,7 +560,7 @@ export function SwapView({
                     const next = { ...draft, toTokenSymbol: s };
                     setDraft(next);
                     triggerFetchImmediate(next);
-                    if (prefillNote) onPrefillNoteDismiss?.();
+
                   }}
                   onSelectChain={(k) => updateToChain(k as ChainKey)}
                   chainModalOpen={showToChainModal}

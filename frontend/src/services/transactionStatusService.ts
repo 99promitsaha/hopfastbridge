@@ -107,7 +107,7 @@ export function pollTransactionStatus(
       // in a row, surface it as a failure so the user isn't left waiting.
       if (consecutiveErrors >= 6 && !stopped) {
         onUpdate({
-          status: 'failed',
+          status: 'pending',
           substatus: 'Status check unavailable. Check the explorer link for the latest state.'
         });
         return;
@@ -121,7 +121,7 @@ export function pollTransactionStatus(
     } else if (attempts >= maxAttempts && !stopped) {
       // Hit the 10-minute wall without a terminal state.
       onUpdate({
-        status: 'failed',
+        status: 'pending',
         substatus: 'Timed out waiting for confirmation. Check the explorer link for the latest state.'
       });
     }

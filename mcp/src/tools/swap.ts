@@ -7,14 +7,22 @@ import { z } from 'zod';
 import { hopfastFetch } from '../client.js';
 
 const CHAIN_KEYS = ['ethereum', 'base', 'bsc', 'polygon', 'monad'] as const;
-const PROVIDERS = ['lifi', 'squid', 'debridge'] as const;
+const PROVIDERS = ['lifi', 'squid', 'debridge', 'relay'] as const;
 
 export function registerSwapTools(server: McpServer): void {
+  server.tool('compare_swap_routes', 'Compare LI.FI, Squid, deBridge and Relay in parallel. Highest eligible destination output ranks first. Failed providers are reported separately. Fee, duration and guaranteed-output constraints are enforced by the server. Arc funding is not enabled yet; these are the existing supported swap chains.', {
+    fromChain: z.enum(CHAIN_KEYS), toChain: z.enum(CHAIN_KEYS), fromToken: z.string(), toToken: z.string(),
+    amount: z.string().describe('Positive amount in source token base units.'), walletAddress: z.string(), recipient: z.string().optional(),
+    maxFeeUsd: z.number().nonnegative().optional(), maxEtaSeconds: z.number().positive().optional(), minDestinationAmount: z.string().optional()
+  }, async ({ fromChain, toChain, fromToken, toToken, amount, walletAddress, recipient, ...limits }) => {
+    const data = await hopfastFetch('/api/quotes/compare', { method: 'POST', body: JSON.stringify({ srcChainKey: fromChain, dstChainKey: toChain, srcTokenAddress: fromToken, dstTokenAddress: toToken, amount, srcWalletAddress: walletAddress, dstWalletAddress: recipient ?? walletAddress, ...limits }) });
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  });
   // ─── get_swap_quote ────────────────────────────────────────────────────────
   server.tool(
     'get_swap_quote',
-    `Get a cross-chain swap quote from one of HopFast's three routing providers
-(LI.FI, Squid Router, or deBridge). Returns the estimated destination amount,
+    `Get a cross-chain swap quote from one of HopFast's four routing providers
+(LI.FI, Squid Router, deBridge, or Relay). Returns the estimated destination amount,
 total fees, estimated duration, and a ready-to-sign transaction request.
 
 Supported chains: ethereum (1), base (8453), bsc (56), polygon (137), monad (143).
@@ -44,12 +52,11 @@ chain-native assets like ETH, BNB, POL, MON.`,
         .describe('Amount to swap in smallest token unit (e.g. "1000000" for 1 USDC).'),
       walletAddress: z
         .string()
-        .optional()
         .describe('Sender wallet address (0x...). Required for executable transaction data.'),
       provider: z
         .enum(PROVIDERS)
         .optional()
-        .describe('Preferred routing provider. Omit to let HopFast choose (defaults to lifi).'),
+        .describe('Preferred routing provider. Omit to use LI.FI. Use compare_swap_routes for provider comparison.'),
     },
     async ({ fromChain, toChain, fromToken, toToken, amount, walletAddress, provider }) => {
       const query = new URLSearchParams({ provider: provider ?? 'lifi' });
@@ -97,7 +104,7 @@ The response also includes receivingTxHash (destination chain tx) and explorerLi
       txHash: z.string().describe('Transaction hash from the source chain (0x...).'),
       provider: z
         .enum(PROVIDERS)
-        .describe('The provider used to submit this transaction (lifi | squid | debridge).'),
+        .describe('The provider used to submit this transaction (lifi | squid | debridge | relay).'),
       fromChain: z
         .enum(CHAIN_KEYS)
         .describe('Source chain key used in the original swap.'),
@@ -188,7 +195,7 @@ and broadcasts a swap transaction.`,
       provider: z
         .enum(PROVIDERS)
         .optional()
-        .describe('Routing provider used (lifi | squid | debridge).'),
+        .describe('Routing provider used (lifi | squid | debridge | relay).'),
       volumeUsd: z
         .number()
         .optional()

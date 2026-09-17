@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { connectDatabase } from './config/db.js';
+import { startPaymentTracking } from './lib/paymentStore.js';
 import routes from './routes/index.js';
 
 const app = express();
@@ -33,6 +34,7 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
 async function bootstrap() {
   await connectDatabase();
 
+  startPaymentTracking();
   app.listen(env.PORT, () => {
     console.log(`[api] HopFast backend listening on port ${env.PORT}`);
   });
