@@ -17,6 +17,8 @@ export interface QuoteResult {
   provider: 'lifi-api' | 'squid-api' | 'mock';
   route: string;
   feeUsd: number;
+  networkFeeUsd?: number;
+  hopfastFeeUsd: string | null;
   feePercent: number;
   etaSeconds: number;
   destinationAmount: string;
@@ -31,6 +33,10 @@ export interface QuoteResult {
     maxPriorityFeePerGas?: string;
   };
   warning?: string;
+  tracking?: {
+    quoteId?: string;
+    requestId?: string;
+  };
   raw?: unknown;
 }
 
@@ -85,7 +91,10 @@ function resolveQuoteUrl(provider: string): string {
   return '';
 }
 
-async function fetchQuoteFromBackend(payload: Record<string, unknown>, provider: string): Promise<unknown> {
+async function fetchQuoteFromBackend(
+  payload: Record<string, unknown>,
+  provider: string
+): Promise<unknown> {
   const quoteUrl = resolveQuoteUrl(provider);
 
   if (!quoteUrl) {
@@ -95,7 +104,7 @@ async function fetchQuoteFromBackend(payload: Record<string, unknown>, provider:
   const response = await fetch(quoteUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   });
 
   if (!response.ok) {
@@ -110,8 +119,13 @@ export async function getSwapQuote(
   request: QuoteRequest,
   provider: 'lifi' | 'squid' = 'lifi'
 ): Promise<QuoteResult> {
-  if (request.fromChain === request.toChain && request.fromTokenSymbol === request.toTokenSymbol) {
-    throw new Error('Source and destination tokens must be different for a same-chain swap.');
+  if (
+    request.fromChain === request.toChain &&
+    request.fromTokenSymbol === request.toTokenSymbol
+  ) {
+    throw new Error(
+      'Source and destination tokens must be different for a same-chain swap.'
+    );
   }
 
   const fromToken = getToken(request.fromChain, request.fromTokenSymbol);
@@ -121,7 +135,10 @@ export async function getSwapQuote(
     throw new Error('Unsupported token for selected chain.');
   }
 
-  const amountInUnits = parseUnits(request.amount, fromToken.decimals).toString();
+  const amountInUnits = parseUnits(
+    request.amount,
+    fromToken.decimals
+  ).toString();
   const wallet = request.walletAddress || NULL_ADDRESS;
 
   const payload = {
@@ -136,9 +153,9 @@ export async function getSwapQuote(
       amountType: 'EXACT_SRC_AMOUNT',
       feeTolerance: {
         type: 'PERCENT',
-        amount: 2
-      }
-    }
+        amount: 2,
+      },
+    },
   };
 
   try {
@@ -152,6 +169,8 @@ export async function getSwapQuote(
         provider?: 'lifi' | 'squid';
         routeSteps?: Array<{ type?: string }>;
         feeUsd?: string;
+        networkFeeUsd?: string;
+        hopfastFeeUsd?: string;
         feePercent?: string;
         duration?: { estimated?: string | null };
         dstAmount?: string;
@@ -170,6 +189,7 @@ export async function getSwapQuote(
           };
         }>;
       }>;
+      requestId?: string;
     };
 
     const quote = data.quotes?.[0];
@@ -177,41 +197,67 @@ export async function getSwapQuote(
       throw new Error('No quote available for this route yet.');
     }
 
-    const route = quote.routeSteps?.map((step) => step.type).filter(Boolean).join(' + ') ?? 'LI.FI';
+    const route =
+      quote.routeSteps
+        ?.map((step) => step.type)
+        .filter(Boolean)
+        .join(' + ') ?? 'LI.FI';
 
     const etaMilliseconds = numberFromUnknown(quote.duration?.estimated, 90000);
 
     const fallbackWarning = data.fallbackUsed
       ? `Fallback used (${data.fallbackFrom ?? 'unknown'}).`
       : undefined;
-    const detailsWarning = data.warnings?.length ? data.warnings.join(' | ') : undefined;
-    const combinedWarning = [fallbackWarning, detailsWarning].filter(Boolean).join(' ');
-    const rawTx = quote.userSteps?.find((step) => step.type === 'TRANSACTION')?.transaction;
-    const transactionRequest = rawTx ? {
-      to: rawTx.to,
-      data: rawTx.data,
-      value: rawTx.value,
-      gasLimit: rawTx.gasLimit ?? rawTx.gas,
-      gasPrice: rawTx.gasPrice,
-      maxFeePerGas: rawTx.maxFeePerGas,
-      maxPriorityFeePerGas: rawTx.maxPriorityFeePerGas,
-    } : undefined;
+    const detailsWarning = data.warnings?.length
+      ? data.warnings.join(' | ')
+      : undefined;
+    const combinedWarning = [fallbackWarning, detailsWarning]
+      .filter(Boolean)
+      .join(' ');
+    const rawTx = quote.userSteps?.find(
+      (step) => step.type === 'TRANSACTION'
+    )?.transaction;
+    const transactionRequest = rawTx
+      ? {
+          to: rawTx.to,
+          data: rawTx.data,
+          value: rawTx.value,
+          gasLimit: rawTx.gasLimit ?? rawTx.gas,
+          gasPrice: rawTx.gasPrice,
+          maxFeePerGas: rawTx.maxFeePerGas,
+          maxPriorityFeePerGas: rawTx.maxPriorityFeePerGas,
+        }
+      : undefined;
 
     return {
       id: quote.id,
       provider: provider === 'squid' ? 'squid-api' : 'lifi-api',
       route,
       feeUsd: numberFromUnknown(quote.feeUsd, 0),
+      networkFeeUsd:
+        quote.networkFeeUsd == null
+          ? undefined
+          : numberFromUnknown(quote.networkFeeUsd, 0),
+      hopfastFeeUsd: provider === 'squid' ? '0' : (quote.hopfastFeeUsd ?? null),
       feePercent: numberFromUnknown(quote.feePercent, 0),
       etaSeconds: Math.max(15, Math.round(etaMilliseconds / 1000)),
-      destinationAmount: parseAmountFromQuote(quote.dstAmount, toToken.decimals),
-      destinationAmountMin: parseAmountFromQuote(quote.dstAmountMin, toToken.decimals),
+      destinationAmount: parseAmountFromQuote(
+        quote.dstAmount,
+        toToken.decimals
+      ),
+      destinationAmountMin: parseAmountFromQuote(
+        quote.dstAmountMin,
+        toToken.decimals
+      ),
       transactionRequest,
       warning: combinedWarning || undefined,
-      raw: quote
+      raw: quote,
+      tracking:
+        provider === 'squid'
+          ? { quoteId: quote.id, requestId: data.requestId }
+          : undefined,
     };
   } catch (error) {
     throw error instanceof Error ? error : new Error('Failed to fetch quote.');
   }
 }
-

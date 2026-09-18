@@ -8,7 +8,7 @@ Add credentials to local environment files, never commit them. Public `VITE_*` v
 4. `ARC_RPC_URL` in `backend/.env`: defaults to the public Arc mainnet endpoint. A dedicated RPC endpoint is optional. The service checks chain ID 5042 before verifying payments.
 5. `MONGODB_URI` in `backend/.env`: a local MongoDB instance or [Atlas](https://cloud.mongodb.com) connection string for swap history. This is a secret connection string, not a browser setting.
 
-`APP_BASE_URL` must point to your frontend. `PAYMENT_STORE_PATH` must be on persistent private disk. `VITE_HOPFAST_API_BASE_URL`, `VITE_MCP_URL` and `HOPFAST_API_URL` (backend origin, without `/api`) must match your local services; use the exact variable names in each `.env.example`.
+`APP_BASE_URL` must point to your frontend. `PAYMENT_STORE_PATH` must be on persistent private disk. `VITE_HOPFAST_API_BASE_URL` must point to the backend origin with `/api`; use the exact variable name in the frontend environment example.
 
 Optional `VITE_ALCHEMY_API_KEY` comes from the [Alchemy dashboard](https://dashboard.alchemy.com) for browser balance lookup. Restrict it to your frontend origins; public RPC fallback is available.
 
@@ -17,3 +17,8 @@ Optional price keys: `COINGECKO_API_KEY` (CoinGecko demo tier) and `CMC_API_KEY`
 ## Local database
 
 MongoDB Community is installed on this Mac and runs on loopback port 27017. `backend/.env` uses `MONGODB_URI=mongodb://127.0.0.1:27017/hopfastbridge`. No Atlas connection or database key is needed for local tests. Start an existing installation with `brew services start mongodb-community@7.0`; stop it with `brew services stop mongodb-community@7.0` when appropriate for your other projects.
+# Support Architects
+
+Backend-only settings are listed in `backend/.env.example`. In [X Developer Console](https://developer.x.com), enable OAuth 2.0 for a Web App and register the exact `X_CALLBACK_URL`, using `127.0.0.1` for local callbacks. Add `X_CLIENT_ID`, `X_CLIENT_SECRET`, and `X_BEARER_TOKEN` for user lookup. Claim scopes are `tweet.read users.read`. DM delivery requires an OAuth user-context bot token with `dm.write`, set as `X_BOT_ACCESS_TOKEN`, plus `X_BOT_REFRESH_TOKEN` and `X_DELIVERY_ENABLED=true`; an app bearer cannot send DMs. Automatic refresh runs on a definite 401 and persists rotated tokens in a private server file. Sample delivery defaults off; local delivery from `@99promitsaha` is now approved and configured, with DM reading excluded.
+
+Choose admin and fee treasury wallet addresses and a separate server claim-signer wallet. The backend needs its `ARCHITECT_SIGNER_KEY`, the deployed `ARCHITECT_ESCROW_ADDRESS`, `ARCHITECT_CHAIN_ID`, and Arc RPC. Never place private keys in frontend variables. The contract is implemented but not deployed. Follow [builder funding setup](../../BUILDER-FUNDING.md), starting on testnet.

@@ -83,7 +83,12 @@ test('receipt verification completes a matching payment; repeat submission is id
   rpc = { eth_chainId: '0x13b2', eth_getTransactionByHash: { from: payer, to: recipient, value: '0x' + BigInt(payment.value).toString(16), input: '0x', chainId: '0x13b2', hash: txHash, blockNumber: '0x1' }, eth_getBlockByNumber: { timestamp: '0x' + Math.floor(Date.now() / 1000).toString(16) }, eth_getTransactionReceipt: { status: '0x1', transactionHash: txHash, blockHash: '0x' + 'b'.repeat(64) } };
   await store.submitPayment(payment, txHash); assert.equal(payment.status, 'completed');
   await store.submitPayment(payment, txHash); assert.equal(payment.status, 'completed');
-  const duplicate = create(); await assert.rejects(store.submitPayment(store.getPayment(duplicate.payment.id, duplicate.accessToken), txHash), /already recorded/);
+  const duplicate = create();
+  const duplicatePayment = store.getPayment(duplicate.payment.id, duplicate.accessToken);
+  // Keep the duplicate request within the mocked block's second so this test
+  // exercises transaction reuse rather than depending on the wall-clock boundary.
+  duplicatePayment.createdAt = payment.createdAt;
+  await assert.rejects(store.submitPayment(duplicatePayment, txHash), /already recorded/);
 });
 test('RPC outages keep submitted payments unknown rather than failed', async () => {
   const result = create(), payment = store.getPayment(result.payment.id, result.accessToken);

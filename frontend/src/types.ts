@@ -1,7 +1,7 @@
 import type { ChainKey } from './lib/chains';
 import type { TxStage as StatusTxStage } from './services/transactionStatusService';
 
-export type EntryView = 'landing' | 'human' | 'agent' | 'stats' | 'payment';
+export type EntryView = 'human' | 'agent' | 'grants' | 'stats' | 'payment' | 'deployment';
 
 export type ProviderKey = 'lifi' | 'squid';
 
@@ -16,6 +16,8 @@ export interface SwapDraft {
 export type TxStage = StatusTxStage;
 
 export interface TxStatus {
+  fromChain?: ChainKey;
+  toChain?: ChainKey;
   hash: string;
   stage: TxStage;
   progress: number;

@@ -1,7 +1,11 @@
 import { env } from '../config/env.js';
-import { assertCalldataRoutesToRecipient, assertValidRecipient, assertValidSender } from './recipientGuard.js';
+import {
+  assertCalldataRoutesToRecipient,
+  assertValidRecipient,
+  assertValidSender,
+} from './recipientGuard.js';
 
-type ChainKey = 'ethereum' | 'base' | 'bsc' | 'polygon' | 'monad';
+type ChainKey = 'ethereum' | 'base' | 'bsc' | 'polygon' | 'monad' | 'arc';
 
 interface UnifiedQuotePayload {
   srcChainKey?: string;
@@ -23,7 +27,8 @@ const CHAIN_ID_BY_KEY: Record<ChainKey, number> = {
   base: 8453,
   bsc: 56,
   polygon: 137,
-  monad: 143
+  monad: 143,
+  arc: 5042,
 };
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
@@ -33,7 +38,8 @@ function parseChainId(value?: string): number {
   if (!value) throw new Error('Missing chain key for Squid quote.');
   if (value in CHAIN_ID_BY_KEY) return CHAIN_ID_BY_KEY[value as ChainKey];
   const numeric = Number(value);
-  if (!Number.isFinite(numeric)) throw new Error(`Unsupported chain key for Squid: ${value}`);
+  if (!Number.isFinite(numeric))
+    throw new Error(`Unsupported chain key for Squid: ${value}`);
   return numeric;
 }
 
@@ -80,7 +86,10 @@ interface SquidRouteResponse {
 }
 
 function calculateFeeUsd(estimate?: SquidEstimate): number {
-  const allCosts = [...(estimate?.feeCosts ?? []), ...(estimate?.gasCosts ?? [])];
+  const allCosts = [
+    ...(estimate?.feeCosts ?? []),
+    ...(estimate?.gasCosts ?? []),
+  ];
   return allCosts.reduce((sum, item) => {
     const parsed = Number(item.amountUsd ?? 0);
     return sum + (Number.isFinite(parsed) ? parsed : 0);
@@ -94,6 +103,8 @@ export async function requestSquidQuote(payload: UnifiedQuotePayload): Promise<{
     provider: 'squid';
     routeSteps: Array<{ type: string }>;
     feeUsd: string;
+    networkFeeUsd: string;
+    hopfastFeeUsd: string;
     feePercent: string;
     duration: { estimated: string };
     dstAmount: string;
@@ -118,16 +129,22 @@ export async function requestSquidQuote(payload: UnifiedQuotePayload): Promise<{
 }> {
   const srcChainId = parseChainId(payload.srcChainKey);
   const dstChainId = parseChainId(payload.dstChainKey);
-
   if (!payload.amount) throw new Error('Missing amount for Squid quote.');
 
   // Fail closed: zero/missing recipient is forbidden across the board.
-  const fromAddress = assertValidSender(payload.srcWalletAddress, 'srcWalletAddress');
-  const toAddress = assertValidRecipient(payload.dstWalletAddress ?? payload.srcWalletAddress, 'dstWalletAddress');
+  const fromAddress = assertValidSender(
+    payload.srcWalletAddress,
+    'srcWalletAddress'
+  );
+  const toAddress = assertValidRecipient(
+    payload.dstWalletAddress ?? payload.srcWalletAddress,
+    'dstWalletAddress'
+  );
 
-  const slippage = typeof payload.options?.feeTolerance?.amount === 'number'
-    ? payload.options.feeTolerance.amount
-    : 1;
+  const slippage =
+    typeof payload.options?.feeTolerance?.amount === 'number'
+      ? payload.options.feeTolerance.amount
+      : 1;
 
   const body = {
     fromChain: String(srcChainId),
@@ -138,11 +155,11 @@ export async function requestSquidQuote(payload: UnifiedQuotePayload): Promise<{
     fromAddress,
     toAddress,
     slippage,
-    slippageConfig: { autoMode: 1 }
+    slippageConfig: { autoMode: 1 },
   };
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   };
 
   if (env.SQUID_INTEGRATOR_ID) {
@@ -153,7 +170,7 @@ export async function requestSquidQuote(payload: UnifiedQuotePayload): Promise<{
     signal: AbortSignal.timeout(20000),
     method: 'POST',
     headers,
-    body: JSON.stringify(body)
+    body: JSON.stringify(body),
   });
 
   const text = await response.text();
@@ -179,9 +196,8 @@ export async function requestSquidQuote(payload: UnifiedQuotePayload): Promise<{
   // Was previously hardcoded to '0', which made the UI always fall back to
   // the "<0.01%" label regardless of the actual fee share.
   const srcUsd = Number(estimate.fromAmountUSD ?? 0);
-  const feePercent = Number.isFinite(srcUsd) && srcUsd > 0
-    ? (feeUsd / srcUsd) * 100
-    : 0;
+  const feePercent =
+    Number.isFinite(srcUsd) && srcUsd > 0 ? (feeUsd / srcUsd) * 100 : 0;
 
   const tx = raw.route?.transactionRequest;
   const txData = tx?.target
@@ -192,7 +208,7 @@ export async function requestSquidQuote(payload: UnifiedQuotePayload): Promise<{
         gasLimit: tx.gasLimit,
         gasPrice: tx.gasPrice,
         maxFeePerGas: tx.maxFeePerGas,
-        maxPriorityFeePerGas: tx.maxPriorityFeePerGas
+        maxPriorityFeePerGas: tx.maxPriorityFeePerGas,
       }
     : undefined;
 
@@ -209,17 +225,25 @@ export async function requestSquidQuote(payload: UnifiedQuotePayload): Promise<{
         provider: 'squid',
         routeSteps: [{ type: 'Axelar' }],
         feeUsd: feeUsd.toFixed(6),
+        networkFeeUsd: calculateFeeUsd({ gasCosts: estimate?.gasCosts }).toFixed(6),
+        hopfastFeeUsd: '0',
         feePercent: feePercent.toFixed(4),
         duration: { estimated: String(durationMs) },
         dstAmount: estimate.toAmount,
         dstAmountMin: estimate.toAmountMin ?? estimate.toAmount,
         userSteps: txData
-          ? [{ type: 'TRANSACTION', action: 'Submit Squid transaction from wallet.', transaction: txData }]
+          ? [
+              {
+                type: 'TRANSACTION',
+                action: 'Submit Squid transaction from wallet.',
+                transaction: txData,
+              },
+            ]
           : [],
-        raw
-      }
+        raw,
+      },
     ],
     raw,
-    requestId: requestId ?? undefined
+    requestId: requestId ?? undefined,
   };
 }

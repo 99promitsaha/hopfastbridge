@@ -5,7 +5,7 @@
 - LI.FI: quote API, parallel route comparison and transaction status.
 - Squid Router v2: quote API, parallel route comparison and transaction status.
 
-The app exposes Ethereum, Base, BNB Chain, Polygon and Monad. A provider may not return a route for every pair, token or amount; live availability determines routing. Arc mainnet is currently a separate native-USDC balance/payment feature, not a supported swap destination.
+The app exposes Arc, Ethereum, Base, BNB Chain, Polygon and Monad. A provider may not return a route for every pair, token or amount; live availability determines routing. Both LI.FI and Squid are queried for Arc mainnet (5042) routes, and the interface presents whichever providers return an executable route. Arc swap USDC uses the six-decimal ERC-20 address `0x3600000000000000000000000000000000000000`; native payments and gas use 18 decimals, sharing the same underlying balance. Live Base-to-Arc executable LI.FI quotes were verified on 2026-09-17; no funds were sent.
 
 ## Other services
 

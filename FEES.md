@@ -1,12 +1,16 @@
 # Integrator fees
 
-Reviewed against provider documentation on 2026-09-17. This change does not activate a new Hopfastbridge commission or modify an external provider account.
+## Builder funding previews
+
+Support Architect envelopes deduct a 2.5% Hopfast fee (250 basis points) from the entered deposit and forward it to the contract’s immutable treasury immediately. A 25 USDC deposit pays 0.625 USDC to Hopfast and reserves 24.375 USDC for claiming or reclaiming. The fee is nonrefundable, irrespective of claim. No second fee applies at claim or reclaim. The escrow implementation is awaiting configuration and deployment. Micro-grant contributions still preview a 1.5% deducted fee: 500 USDC yields 492.5 USDC for the builder, a 7.5 fee, and 500 total. Gas is separate. Six-decimal integer calculations round fees up to the next micro-USDC; amounts entirely consumed by rounding are rejected. Existing bridge fees remain unchanged. See [builder funding](BUILDER-FUNDING.md) for contract and identity details.
+
+Reviewed against provider documentation on 2026-09-17. Local `LIFI_FEE` is configured to 0.0005: five basis points, or 0.05%. LI.FI quotes require the portal integrator and receiving wallet; missing configuration produces an explicit error. Squid requests have no added Hopfast commission. External provider accounts have not been modified.
 
 ## LI.FI
 
-Create the integration and configure the receiving wallet in [LI.FI Portal](https://portal.li.fi). Use that integration's exact identifier as `LIFI_INTEGRATOR` in `backend/.env`. The existing quote client forwards `LIFI_INTEGRATOR` and `LIFI_FEE` to LI.FI; the latter is a decimal fraction, not a percentage integer.
+Create the integration and configure the receiving wallet in [LI.FI Portal](https://portal.li.fi). Use that integration's short API integrator string (maximum 23 alphanumeric characters, also allowing `-`, `_` and `.`), not its UUID as `LIFI_INTEGRATOR` in `backend/.env`. The existing quote client forwards `LIFI_INTEGRATOR` and `LIFI_FEE` to LI.FI; the latter is a decimal fraction, not a percentage integer.
 
-Example: `LIFI_FEE=0.001` requests a 0.1% integrator fee, or $0.10 of a $100 input before any revenue share. `LIFI_FEE=0` requests no extra commission. Never set `0.1` if you mean 0.1%, since that is 10%.
+Example: `LIFI_FEE=0.0005` requests a 0.05% integrator fee, or $0.05 of a $100 input before any revenue share. `LIFI_FEE=0` requests no extra commission. Never set `0.1` if you mean 0.1%, since that is 10%.
 
 Fees are deducted from the sending asset and forwarded to the portal-configured wallet at execution. LI.FI receives a share of integrator fees depending on use case and volume, so confirm commercial terms before calculating net revenue. LI.FI also documents a 0.25% service fee and variable bridge/DEX costs; our extra commission is not the entire user cost.
 
@@ -25,3 +29,9 @@ Reference: [Squid v2 fee collection](https://docs.squidrouter.com/widget-integra
 ## Activation checklist
 
 Choose a rate and receiving wallet, configure LI.FI Portal, arrange Squid enablement, add the Squid server configuration, validate fee-bearing quotes and display the actual commission alongside total estimated costs. Confirm fee receipt with a user-approved transaction before calling monetization complete. Wallet signing remains entirely with the user.
+
+## Display and accounting
+
+The Hopfast fee row uses LI.FI's returned `amountUSD` for its included fee-collection step. A separate commission retains the provider's decimal amount. When LI.FI supplies `feeSplit.integratorFee` and token price/decimals, the row values that exact integrator token amount at the quote price using decimal integer arithmetic. When the split is absent and LI.FI combines its 25-basis-point platform fee with our 5-basis-point commission, we fall back to our proportional share of the reported USD amount. This is a quote valuation, subject to the provider's price and rounding, not a guarantee of final fiat settlement. The live `hopfast` quote confirmed a combined 0.0030 fee; $0.0729 total corresponds to $0.01215 for Hopfast. No fee-bearing transaction was sent. Fees cannot be reliably classified by free-text names. If LI.FI does not confirm the commission, the backend refuses the quote instead of inventing a dollar amount.
+
+This is a breakdown only: route totals use top-level fee/gas costs once, quoted output remains unchanged, and no extra transfer or amount deduction is added. Squid displays Free for the Hopfast commission; provider and network costs still apply.

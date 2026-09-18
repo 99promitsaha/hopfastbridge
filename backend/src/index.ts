@@ -16,7 +16,7 @@ app.use(
   })
 );
 app.use(helmet());
-app.use(morgan('dev'));
+app.use(morgan('dev', {skip: req => req.path.startsWith('/api/architects')}));
 app.use(express.json({ limit: '1mb' }));
 
 app.use('/api', routes);

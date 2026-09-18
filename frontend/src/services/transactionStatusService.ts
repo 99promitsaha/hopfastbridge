@@ -1,15 +1,16 @@
 import type { ChainKey } from '../lib/chains';
 
-export type TxStage = 'submitted' | 'confirming' | 'bridging' | 'completed' | 'failed' | 'pending';
+export type TxStage =
+  'submitted' | 'confirming' | 'bridging' | 'completed' | 'failed' | 'pending';
 
 export interface TxStatusResult {
   status: TxStage;
-  substatus?: string;         // Human-readable message (may come straight from LI.FI)
-  substatusCode?: string;     // Raw LI.FI enum (e.g. WAIT_SOURCE_CONFIRMATIONS)
-  sendingTxHash?: string;     // Source-chain tx
-  receivingTxHash?: string;   // Destination-chain tx (cross-chain only, appears late)
-  explorerLink?: string;      // Best explorer link (destination tx if available, else LI.FI)
-  lifiExplorerLink?: string;  // LI.FI cross-chain explorer
+  substatus?: string; // Human-readable message (may come straight from LI.FI)
+  substatusCode?: string; // Raw LI.FI enum (e.g. WAIT_SOURCE_CONFIRMATIONS)
+  sendingTxHash?: string; // Source-chain tx
+  receivingTxHash?: string; // Destination-chain tx (cross-chain only, appears late)
+  explorerLink?: string; // Best explorer link (destination tx if available, else LI.FI)
+  lifiExplorerLink?: string; // LI.FI cross-chain explorer
 }
 
 function resolveApiBaseUrl(): string {
@@ -32,7 +33,8 @@ export async function fetchTransactionStatus(
   txHash: string,
   provider: string,
   fromChain: ChainKey,
-  toChain?: ChainKey
+  toChain?: ChainKey,
+  tracking?: { quoteId?: string; requestId?: string }
 ): Promise<TxStatusResult> {
   const base = resolveApiBaseUrl();
   if (!base) {
@@ -43,6 +45,8 @@ export async function fetchTransactionStatus(
   // Per LI.FI docs, same-chain swaps require toChain == fromChain, else
   // NOT_FOUND. Default to fromChain when the caller doesn't specify.
   params.set('toChain', toChain ?? fromChain);
+  if (tracking?.quoteId) params.set('quoteId', tracking.quoteId);
+  if (tracking?.requestId) params.set('requestId', tracking.requestId);
   const response = await fetch(`${base}/status?${params.toString()}`);
 
   if (!response.ok) {
@@ -61,7 +65,7 @@ const STAGE_PROGRESS: Record<TxStage, number> = {
   completed: 100,
   // Keep the progress bar visible on failure — the UI recolors it red
   // instead of collapsing to 0 so the user sees a clear failed state.
-  failed: 100
+  failed: 100,
 };
 
 export function stageToProgress(stage: TxStage): number {
@@ -80,6 +84,7 @@ export function pollTransactionStatus(
   fromChain: ChainKey,
   onUpdate: (result: TxStatusResult) => void,
   toChain?: ChainKey,
+  tracking?: { quoteId?: string; requestId?: string },
   intervalMs = 5000,
   maxAttempts = 120
 ): { stop: () => void } {
@@ -93,7 +98,13 @@ export function pollTransactionStatus(
     attempts++;
 
     try {
-      const result = await fetchTransactionStatus(txHash, provider, fromChain, toChain);
+      const result = await fetchTransactionStatus(
+        txHash,
+        provider,
+        fromChain,
+        toChain,
+        tracking
+      );
       if (stopped) return;
       consecutiveErrors = 0;
       onUpdate(result);
@@ -108,7 +119,8 @@ export function pollTransactionStatus(
       if (consecutiveErrors >= 6 && !stopped) {
         onUpdate({
           status: 'pending',
-          substatus: 'Status check unavailable. Check the explorer link for the latest state.'
+          substatus:
+            'Status check unavailable. Check the explorer link for the latest state.',
         });
         return;
       }
@@ -122,7 +134,8 @@ export function pollTransactionStatus(
       // Hit the 10-minute wall without a terminal state.
       onUpdate({
         status: 'pending',
-        substatus: 'Timed out waiting for confirmation. Check the explorer link for the latest state.'
+        substatus:
+          'Timed out waiting for confirmation. Check the explorer link for the latest state.',
       });
     }
   };
@@ -134,6 +147,6 @@ export function pollTransactionStatus(
     stop: () => {
       stopped = true;
       if (timeoutId) clearTimeout(timeoutId);
-    }
+    },
   };
 }

@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { PrivyWalletBridge } from '../components/WalletConnector';
 import type { QuoteResult } from '../services/quoteService';
-import { pollTransactionStatus, stageToProgress, type TxStatusResult } from '../services/transactionStatusService';
+import {
+  pollTransactionStatus,
+  stageToProgress,
+  type TxStatusResult,
+} from '../services/transactionStatusService';
 import { parseUnits } from '../lib/amount';
 import { ensureTokenApproval, isNativeToken } from '../lib/erc20';
 import { toHexQuantity, validateTransactionRequest } from '../lib/swap';
@@ -22,177 +26,259 @@ export function useSwapExecution(
   const statusPollerRef = useRef<{ stop: () => void } | null>(null);
 
   useEffect(() => {
-    return () => { statusPollerRef.current?.stop(); };
+    return () => {
+      statusPollerRef.current?.stop();
+    };
   }, []);
 
-  const startStatusPolling = useCallback((
-    hash: string,
-    provider: string,
-    fromChain: ChainKey,
-    toChain: ChainKey
-  ) => {
-    statusPollerRef.current?.stop();
+  const startStatusPolling = useCallback(
+    (
+      hash: string,
+      provider: string,
+      fromChain: ChainKey,
+      toChain: ChainKey,
+      tracking?: { quoteId?: string; requestId?: string }
+    ) => {
+      statusPollerRef.current?.stop();
 
-    setTxStatus({ hash, stage: 'submitted', progress: stageToProgress('submitted') });
-
-    statusPollerRef.current = pollTransactionStatus(
-      hash,
-      provider,
-      fromChain,
-      (result: TxStatusResult) => {
-        setTxStatus((prev) => {
-          if (!prev || prev.hash !== hash) return prev;
-          return {
-            ...prev,
-            stage: result.status,
-            progress: stageToProgress(result.status),
-            substatus: result.substatus,
-            substatusCode: result.substatusCode,
-            sendingTxHash: result.sendingTxHash,
-            receivingTxHash: result.receivingTxHash,
-            explorerLink: result.explorerLink,
-            lifiExplorerLink: result.lifiExplorerLink
-          };
-        });
-      },
-      toChain
-    );
-  }, []);
-
-  const recordSwap = useCallback(async (
-    txHash: string,
-    address: string,
-    quoteId: string,
-    draft: SwapDraft,
-    provider: string,
-    volumeUsd?: number
-  ) => {
-    try {
-      await fetch(`${API_BASE_URL}/swaps`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userAddress: address,
-          quoteId,
-          fromChain: draft.fromChain,
-          toChain: draft.toChain,
-          fromTokenSymbol: draft.fromTokenSymbol,
-          toTokenSymbol: draft.toTokenSymbol,
-          amount: draft.amount,
-          ...(volumeUsd != null && { volumeUsd }),
-          status: 'submitted',
-          txHash,
-          provider,
-          metadata: { txHash, provider }
-        })
+      setTxStatus({
+        hash,
+        fromChain,
+        toChain,
+        stage: 'submitted',
+        progress: stageToProgress('submitted'),
       });
-    } catch { /* non-critical */ }
-  }, []);
 
-  const executeSwap = useCallback(async (
-    draft: SwapDraft,
-    bestQuote: QuoteResult,
-    selectedFromToken: { address: string; decimals: number; symbol: string },
-    requestedAmountRaw: bigint | null,
-    privyLogin: () => void,
-    hasPrivy: boolean,
-    isAuthenticated: boolean,
-    isAmountInsufficient: boolean,
-    volumeUsd?: number
-  ) => {
-    if (!walletBridge) {
-      if (hasPrivy && !isAuthenticated) {
-        privyLogin();
-      } else {
-        setError('Please connect your wallet first.');
-      }
-      return;
-    }
-
-    if (isAmountInsufficient) {
-      setError(`Insufficient ${selectedFromToken.symbol} balance for this swap amount.`);
-      return;
-    }
-
-    if (!bestQuote.transactionRequest) {
-      setError('No executable transaction found in this quote.');
-      return;
-    }
-
-    const txValidationError = validateTransactionRequest(bestQuote.transactionRequest);
-    if (txValidationError) {
-      setError(txValidationError);
-      return;
-    }
-
-    // Defence-in-depth: if the calldata contains the connected wallet's
-    // address, the recipient embedded matches us. If NEITHER fromChain nor
-    // dstChain calldata mentions our address, something is off — refuse.
-    // (Provider routers universally encode the recipient in calldata; a quote
-    //  that omits us entirely is almost certainly misrouted.)
-    const data = (bestQuote.transactionRequest.data ?? '').toLowerCase();
-    const walletNeedle = walletBridge.address.toLowerCase().replace(/^0x/, '');
-    if (data.length > 10 && walletNeedle && !data.includes(walletNeedle)) {
-      setError(
-        'Safety check failed: this quote does not appear to route funds to your connected wallet. Refresh quotes and try again.'
+      statusPollerRef.current = pollTransactionStatus(
+        hash,
+        provider,
+        fromChain,
+        (result: TxStatusResult) => {
+          setTxStatus((prev) => {
+            if (!prev || prev.hash !== hash) return prev;
+            return {
+              ...prev,
+              stage: result.status,
+              progress: stageToProgress(result.status),
+              substatus: result.substatus,
+              substatusCode: result.substatusCode,
+              sendingTxHash: result.sendingTxHash,
+              receivingTxHash: result.receivingTxHash,
+              explorerLink: result.explorerLink,
+              lifiExplorerLink: result.lifiExplorerLink,
+            };
+          });
+        },
+        toChain,
+        tracking
       );
-      return;
-    }
+    },
+    []
+  );
 
-    try {
-      setIsExecuting(true);
-      setError('');
-      setTxStatus(null);
+  const recordSwap = useCallback(
+    async (
+      txHash: string,
+      address: string,
+      quoteId: string,
+      draft: SwapDraft,
+      provider: string,
+      volumeUsd?: number,
+      tracking?: { quoteId?: string; requestId?: string }
+    ) => {
+      try {
+        await fetch(`${API_BASE_URL}/swaps`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userAddress: address,
+            quoteId,
+            fromChain: draft.fromChain,
+            toChain: draft.toChain,
+            fromTokenSymbol: draft.fromTokenSymbol,
+            toTokenSymbol: draft.toTokenSymbol,
+            amount: draft.amount,
+            ...(volumeUsd != null && { volumeUsd }),
+            status: 'submitted',
+            txHash,
+            provider,
+            metadata: { txHash, provider, ...tracking },
+          }),
+        });
+      } catch {
+        /* non-critical */
+      }
+    },
+    []
+  );
 
-      await walletBridge.switchChain(fromChainId);
-      const provider = await walletBridge.getEthereumProvider();
+  const executeSwap = useCallback(
+    async (
+      draft: SwapDraft,
+      bestQuote: QuoteResult,
+      selectedFromToken: { address: string; decimals: number; symbol: string },
+      requestedAmountRaw: bigint | null,
+      privyLogin: () => void,
+      hasPrivy: boolean,
+      isAuthenticated: boolean,
+      isAmountInsufficient: boolean,
+      volumeUsd?: number
+    ) => {
+      if (!walletBridge) {
+        if (hasPrivy && !isAuthenticated) {
+          privyLogin();
+        } else {
+          setError('Please connect your wallet first.');
+        }
+        return;
+      }
 
-      const spenderAddress = bestQuote.transactionRequest.to;
-      if (spenderAddress && !isNativeToken(selectedFromToken.address)) {
-        const requiredAmount = requestedAmountRaw ?? parseUnits(draft.amount, selectedFromToken.decimals);
-        await ensureTokenApproval(
-          provider,
-          selectedFromToken.address,
-          walletBridge.address,
-          spenderAddress,
-          requiredAmount
+      if (isAmountInsufficient) {
+        setError(
+          `Insufficient ${selectedFromToken.symbol} balance for this swap amount.`
         );
+        return;
       }
 
-      const txParams: Record<string, unknown> = {
-        from: walletBridge.address,
-        to: bestQuote.transactionRequest.to,
-        // Base Builder Code attribution applies on Base only.
-        data: appendBuilderCodeForChain(bestQuote.transactionRequest.data, fromChainId),
-        value: toHexQuantity(bestQuote.transactionRequest.value) ?? '0x0',
-      };
-
-      if (bestQuote.transactionRequest.maxFeePerGas) {
-        txParams.maxFeePerGas = toHexQuantity(bestQuote.transactionRequest.maxFeePerGas);
-        txParams.maxPriorityFeePerGas = toHexQuantity(bestQuote.transactionRequest.maxPriorityFeePerGas);
-      } else if (bestQuote.transactionRequest.gasPrice) {
-        txParams.gasPrice = toHexQuantity(bestQuote.transactionRequest.gasPrice);
-      }
-      if (bestQuote.transactionRequest.gasLimit) {
-        txParams.gas = toHexQuantity(bestQuote.transactionRequest.gasLimit);
+      if (!bestQuote.transactionRequest) {
+        setError('No executable transaction found in this quote.');
+        return;
       }
 
-      const txHash = (await provider.request({
-        method: 'eth_sendTransaction',
-        params: [txParams]
-      })) as string;
+      const txValidationError = validateTransactionRequest(
+        bestQuote.transactionRequest
+      );
+      if (txValidationError) {
+        setError(txValidationError);
+        return;
+      }
 
-      startStatusPolling(txHash, bestQuote.provider, draft.fromChain, draft.toChain);
-      await recordSwap(txHash, walletBridge.address, bestQuote.id, draft, bestQuote.provider, volumeUsd);
+      // Defence-in-depth: if the calldata contains the connected wallet's
+      // address, the recipient embedded matches us. If NEITHER fromChain nor
+      // dstChain calldata mentions our address, something is off — refuse.
+      // (Provider routers universally encode the recipient in calldata; a quote
+      //  that omits us entirely is almost certainly misrouted.)
+      const data = (bestQuote.transactionRequest.data ?? '').toLowerCase();
+      const walletNeedle = walletBridge.address
+        .toLowerCase()
+        .replace(/^0x/, '');
+      if (data.length > 10 && walletNeedle && !data.includes(walletNeedle)) {
+        setError(
+          'Safety check failed: this quote does not appear to route funds to your connected wallet. Refresh quotes and try again.'
+        );
+        return;
+      }
 
-      onPostSwap();
-    } catch (caughtError) {
-      setTxStatus((p) => p ? { ...p, stage: 'failed', progress: p.progress } : null);
-      setError(caughtError instanceof Error ? caughtError.message : 'Swap execution failed.');
-    } finally {
-      setIsExecuting(false);
-    }
-  }, [walletBridge, fromChainId, startStatusPolling, recordSwap, onPostSwap]);
+      try {
+        setIsExecuting(true);
+        setError('');
+        setTxStatus(null);
+
+        await walletBridge.switchChain(fromChainId);
+        const provider = await walletBridge.getEthereumProvider();
+
+        if (fromChainId === 5042) {
+          const nativeBalance = BigInt(
+            (await provider.request({
+              method: 'eth_getBalance',
+              params: [walletBridge.address, 'latest'],
+            })) as string
+          );
+          const sourceAmount =
+            (requestedAmountRaw ?? parseUnits(draft.amount, 6)) * 10n ** 12n;
+          const gasPrice = BigInt(
+            bestQuote.transactionRequest.maxFeePerGas ??
+              bestQuote.transactionRequest.gasPrice ??
+              ((await provider.request({ method: 'eth_gasPrice' })) as string)
+          );
+          // Reserve for the route and a possible approval. Both spend native USDC.
+          const gasLimit =
+            BigInt(bestQuote.transactionRequest.gasLimit ?? '500000') + 100000n;
+          const reserve = (gasLimit * gasPrice * 120n) / 100n;
+          if (nativeBalance < sourceAmount + reserve)
+            throw new Error(
+              'Keep some USDC for Arc gas. Reduce your swap amount before continuing.'
+            );
+        }
+        const spenderAddress = bestQuote.transactionRequest.to;
+        if (spenderAddress && !isNativeToken(selectedFromToken.address)) {
+          const requiredAmount =
+            requestedAmountRaw ??
+            parseUnits(draft.amount, selectedFromToken.decimals);
+          await ensureTokenApproval(
+            provider,
+            selectedFromToken.address,
+            walletBridge.address,
+            spenderAddress,
+            requiredAmount
+          );
+        }
+
+        const txParams: Record<string, unknown> = {
+          from: walletBridge.address,
+          to: bestQuote.transactionRequest.to,
+          // Base Builder Code attribution applies on Base only.
+          data: appendBuilderCodeForChain(
+            bestQuote.transactionRequest.data,
+            fromChainId
+          ),
+          value: toHexQuantity(bestQuote.transactionRequest.value) ?? '0x0',
+        };
+
+        if (bestQuote.transactionRequest.maxFeePerGas) {
+          txParams.maxFeePerGas = toHexQuantity(
+            bestQuote.transactionRequest.maxFeePerGas
+          );
+          txParams.maxPriorityFeePerGas = toHexQuantity(
+            bestQuote.transactionRequest.maxPriorityFeePerGas
+          );
+        } else if (bestQuote.transactionRequest.gasPrice) {
+          txParams.gasPrice = toHexQuantity(
+            bestQuote.transactionRequest.gasPrice
+          );
+        }
+        if (bestQuote.transactionRequest.gasLimit) {
+          txParams.gas = toHexQuantity(bestQuote.transactionRequest.gasLimit);
+        }
+
+        const txHash = (await provider.request({
+          method: 'eth_sendTransaction',
+          params: [txParams],
+        })) as string;
+
+        startStatusPolling(
+          txHash,
+          bestQuote.provider,
+          draft.fromChain,
+          draft.toChain,
+          bestQuote.tracking
+        );
+        await recordSwap(
+          txHash,
+          walletBridge.address,
+          bestQuote.id,
+          draft,
+          bestQuote.provider,
+          volumeUsd,
+          bestQuote.tracking
+        );
+
+        onPostSwap();
+      } catch (caughtError) {
+        setTxStatus((p) =>
+          p ? { ...p, stage: 'failed', progress: p.progress } : null
+        );
+        setError(
+          caughtError instanceof Error
+            ? caughtError.message
+            : 'Swap execution failed.'
+        );
+      } finally {
+        setIsExecuting(false);
+      }
+    },
+    [walletBridge, fromChainId, startStatusPolling, recordSwap, onPostSwap]
+  );
 
   const clearTxStatus = useCallback(() => setTxStatus(null), []);
   const clearError = useCallback(() => setError(''), []);

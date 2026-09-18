@@ -13,7 +13,9 @@ export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 export class InvalidRecipientError extends Error {
   constructor(reason: string) {
-    super(`Invalid recipient for quote: ${reason}. Connect a wallet before requesting an executable quote.`);
+    super(
+      `Invalid recipient for quote: ${reason}. Connect a wallet before requesting an executable quote.`
+    );
     this.name = 'InvalidRecipientError';
   }
 }
@@ -23,15 +25,22 @@ export class InvalidRecipientError extends Error {
  * Use for any field that will be interpreted by an upstream router as the
  * destination recipient of bridged funds.
  */
-export function assertValidRecipient(address: string | undefined, label = 'recipient'): string {
+export function assertValidRecipient(
+  address: string | undefined,
+  label = 'recipient'
+): string {
   if (!address) {
     throw new InvalidRecipientError(`${label} missing`);
   }
   if (!EVM_ADDRESS_REGEX.test(address)) {
-    throw new InvalidRecipientError(`${label} is not a valid EVM address (${address})`);
+    throw new InvalidRecipientError(
+      `${label} is not a valid EVM address (${address})`
+    );
   }
   if (address.toLowerCase() === ZERO_ADDRESS) {
-    throw new InvalidRecipientError(`${label} is the zero address — upstream APIs may silently substitute a fallback wallet`);
+    throw new InvalidRecipientError(
+      `${label} is the zero address — upstream APIs may silently substitute a fallback wallet`
+    );
   }
   return address;
 }
@@ -41,7 +50,10 @@ export function assertValidRecipient(address: string | undefined, label = 'recip
  * APIs often pick routes based on `fromAddress`; a zero here tends to produce
  * sub-optimal or unexecutable quotes. Enforced for consistency.
  */
-export function assertValidSender(address: string | undefined, label = 'sender'): string {
+export function assertValidSender(
+  address: string | undefined,
+  label = 'sender'
+): string {
   return assertValidRecipient(address, label);
 }
 
@@ -62,7 +74,7 @@ export function assertValidSender(address: string | undefined, label = 'sender')
  *   - Frontend `useSwapExecution` calldata scan at sign-time
  *
  * The backend-side check specifically matters for non-browser clients (our
- * MCP server, direct API consumers) which never run the frontend scan.
+ * direct API consumers) which never run the frontend scan.
  *
  * No-ops on empty / selector-only calldata (length <= 10 hex chars, i.e. just
  * a 4-byte function selector or nothing) — there are no parameters to check.

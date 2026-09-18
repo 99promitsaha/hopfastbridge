@@ -17,6 +17,7 @@ const ALCHEMY_CHAIN_SUBDOMAIN: Partial<Record<ChainKey, string>> = {
 
 // BSC and Monad are NOT supported by Alchemy — use public RPCs as fallback
 const FALLBACK_RPC_BY_CHAIN: Partial<Record<ChainKey, string[]>> = {
+  arc: ['https://rpc.mainnet.arc.io'],
   bsc: ['https://binance.llamarpc.com', 'https://bsc-rpc.publicnode.com'],
   monad: ['https://rpc.monad.xyz', 'https://monad-mainnet.drpc.org']
 };

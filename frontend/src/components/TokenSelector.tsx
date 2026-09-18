@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { ChevronDown, X } from 'lucide-react';
+import { Check, ChevronDown, Search } from 'lucide-react';
+import { Dialog } from './Dialog';
 import type { TokenOption, ChainOption } from '../lib/chains';
-
 interface TokenSelectorProps {
   label: string;
   selectedToken: TokenOption;
@@ -10,14 +10,11 @@ interface TokenSelectorProps {
   chains: ChainOption[];
   onSelectToken: (symbol: string) => void;
   onSelectChain: (chainKey: string) => void;
-  /** Controlled: whether the chain modal is open (managed by parent) */
   chainModalOpen: boolean;
-  /** Called when the chain modal should close */
   onChainModalClose: () => void;
-  /** Map of lowercase token address → formatted balance string */
   balances?: Record<string, string>;
+  disabled?: boolean;
 }
-
 export function TokenSelector({
   label,
   selectedToken,
@@ -28,145 +25,104 @@ export function TokenSelector({
   onSelectChain,
   chainModalOpen,
   onChainModalClose,
-  balances
+  balances,
+  disabled,
 }: TokenSelectorProps) {
-  const [showTokenModal, setShowTokenModal] = useState(false);
-  const [tokenSearch, setTokenSearch] = useState('');
-  const normalizedSearch = tokenSearch.trim().toLowerCase();
-  const filteredTokens = normalizedSearch
-    ? tokens.filter((token) =>
-      token.symbol.toLowerCase().includes(normalizedSearch)
-      || token.name.toLowerCase().includes(normalizedSearch)
-    )
-    : tokens;
-
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const filtered = tokens.filter((t) =>
+    `${t.symbol} ${t.name} ${t.address}`
+      .toLowerCase()
+      .includes(search.trim().toLowerCase())
+  );
   return (
     <>
-      <div className="hf-token-selector">
-        <button
-          className="hf-token-btn"
-          onClick={() => setShowTokenModal(true)}
-          aria-label={`Select ${label} token`}
-        >
-          <img
-            src={selectedToken.logoURI}
-            alt={selectedToken.symbol}
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = 'none';
-            }}
-          />
-          {selectedToken.symbol}
-          <ChevronDown size={12} />
-        </button>
-      </div>
-
-      {/* Token Selection Modal */}
-      {showTokenModal && (
-        <div className="hf-dropdown-overlay" onClick={() => setShowTokenModal(false)}>
-          <div
-            className="hf-dropdown-panel hf-fadeup"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="hf-dropdown-header">
-              <h3>Select Token</h3>
+      <button
+        className="hf-token-btn"
+        disabled={disabled}
+        onClick={() => {
+          setSearch('');
+          setOpen(true);
+        }}
+        aria-label={`Select ${label} token`}
+      >
+        <img src={selectedToken.logoURI} alt="" />
+        {selectedToken.symbol}
+        <ChevronDown size={14} />
+      </button>
+      {open && (
+        <Dialog title="Select a token" onClose={() => setOpen(false)}>
+          <p className="hf-dialog-sub">Available on {chain.name}</p>
+          <label className="hf-dropdown-search-wrap">
+            <Search size={17} />
+            <input
+              className="hf-dropdown-search"
+              placeholder="Search name or address"
+              aria-label="Search tokens"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </label>
+          <div className="hf-dropdown-list">
+            {filtered.map((t) => (
               <button
-                className="hf-dropdown-close"
-                onClick={() => setShowTokenModal(false)}
+                key={t.address}
+                className={`hf-dropdown-item ${t.symbol === selectedToken.symbol ? 'hf-dropdown-item-active' : ''}`}
+                onClick={() => {
+                  onSelectToken(t.symbol);
+                  setOpen(false);
+                }}
               >
-                <X size={18} />
+                <img src={t.logoURI} alt="" />
+                <span className="hf-dropdown-item-info">
+                  <strong>{t.symbol}</strong>
+                  <span>{t.name}</span>
+                </span>
+                {balances?.[t.address.toLowerCase()] != null && (
+                  <span className="hf-dropdown-item-balance">
+                    {balances[t.address.toLowerCase()]}
+                  </span>
+                )}
+                {t.symbol === selectedToken.symbol && <Check size={17} />}
               </button>
-            </div>
-            <div className="hf-dropdown-search-wrap">
-              <input
-                className="hf-dropdown-search"
-                placeholder="Search token"
-                value={tokenSearch}
-                onChange={(e) => setTokenSearch(e.target.value)}
-              />
-            </div>
-            <div className="hf-dropdown-list">
-              {filteredTokens.map((token) => (
-                <button
-                  key={token.symbol}
-                  className={`hf-dropdown-item ${
-                    token.symbol === selectedToken.symbol
-                      ? 'hf-dropdown-item-active'
-                      : ''
-                  }`}
-                  onClick={() => {
-                    onSelectToken(token.symbol);
-                    setShowTokenModal(false);
-                  }}
-                >
-                  <img
-                    src={token.logoURI}
-                    alt={token.symbol}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                  <div className="hf-dropdown-item-info">
-                    <strong>{token.symbol}</strong>
-                    <span>{token.name}</span>
-                  </div>
-                  {balances?.[token.address.toLowerCase()] != null && (
-                    <span className="hf-dropdown-item-balance">
-                      {balances[token.address.toLowerCase()]}
-                    </span>
-                  )}
-                </button>
-              ))}
-              {filteredTokens.length === 0 && (
-                <div className="hf-dropdown-empty">No token matches that search.</div>
-              )}
-            </div>
+            ))}
+            {!filtered.length && (
+              <p className="hf-dropdown-empty">
+                No tokens found. Try another search.
+              </p>
+            )}
           </div>
-        </div>
+          {chain.key === 'arc' && (
+            <p className="hf-dialog-note">
+              USDC powers payments and gas on Arc. One asset, one balance.
+            </p>
+          )}
+        </Dialog>
       )}
-
-      {/* Chain Selection Modal */}
       {chainModalOpen && (
-        <div className="hf-dropdown-overlay" onClick={onChainModalClose}>
-          <div
-            className="hf-dropdown-panel hf-fadeup"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="hf-dropdown-header">
-              <h3>Select Network</h3>
+        <Dialog title="Choose network" onClose={onChainModalClose}>
+          <p className="hf-dialog-sub">
+            Select where your USDC starts or lands.
+          </p>
+          <div className="hf-dropdown-list">
+            {chains.map((c) => (
               <button
-                className="hf-dropdown-close"
-                onClick={onChainModalClose}
+                key={c.key}
+                className={`hf-dropdown-item ${c.key === chain.key ? 'hf-dropdown-item-active' : ''}`}
+                onClick={() => {
+                  onSelectChain(c.key);
+                  onChainModalClose();
+                }}
               >
-                <X size={18} />
+                <img src={c.logoURI} alt="" />
+                <span className="hf-dropdown-item-info">
+                  <strong>{c.name}</strong>
+                </span>
+                {c.key === chain.key && <Check size={17} />}
               </button>
-            </div>
-            <div className="hf-dropdown-list">
-              {chains.map((c) => (
-                <button
-                  key={c.key}
-                  className={`hf-dropdown-item ${
-                    c.key === chain.key ? 'hf-dropdown-item-active' : ''
-                  }`}
-                  onClick={() => {
-                    onSelectChain(c.key);
-                    onChainModalClose();
-                  }}
-                >
-                  <img
-                    src={c.logoURI}
-                    alt={c.name}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
-                  <div className="hf-dropdown-item-info">
-                    <strong>{c.name}</strong>
-                  </div>
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
-        </div>
+        </Dialog>
       )}
     </>
   );

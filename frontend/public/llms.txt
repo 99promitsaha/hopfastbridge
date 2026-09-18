@@ -1,5 +1,6 @@
 # Hopfastbridge
 
-Cross-chain swap route comparison and user-approved USDC payments on Arc.
-Agents prepare requests; users sign in their wallets. Transaction hashes must be verified before reporting completion.
-Read the MCP tools and hopfast://guide for current capabilities.
+A Swap Aggregator and Micro-grant platform, on Arc. Compare LI.FI and Squid routes, discover Arc architects, and post micro-grant requests.
+Support ARCHITECTS: Arc USDC escrow envelopes with permanent X account verification, wallet-bound claims and funder reclaim after 30 days. Activation requires escrow deployment and X configuration. Optional agent DM delivery defaults off; private claim links can be shared directly.
+Support envelopes deduct and forward a nonrefundable 2.5% Hopfast fee at deposit; the remaining 97.5% is claimable or reclaimable. Admin recovery applies only to expired envelopes, after a seven-day public delay. Micro-grant contributions remain a preview with a 1.5% deducted fee.
+Users review every route and sign in their own wallets. Transaction hashes must be verified before reporting completion.

@@ -1,21 +1,17 @@
 {
-  "name": "HopFast",
-  "short_name": "HopFast",
-  "description": "Cross-chain swaps and user-approved Arc payments",
+  "name": "Hopfast | Swap Aggregator and Micro-grant platform, on Arc",
+  "short_name": "Hopfast",
+  "description": "A Swap Aggregator and Micro-grant platform, on Arc. USDC envelopes and builder funding are coming soon.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#F5A7CA",
+  "theme_color": "#1B3158",
   "icons": [
     {
-      "src": "/favicon-32.png",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     },
     {
       "src": "/icon-192.png",

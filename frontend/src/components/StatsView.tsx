@@ -37,10 +37,39 @@ export function StatsView({ onBack }: Props) {
   useEffect(() => {
     setLoading(true);
     setError('');
-    fetch(`${API_BASE_URL}/stats?period=${period}`)
-      .then((r) => r.json())
-      .then((d) => { setData(d); setLoading(false); })
-      .catch(() => { setError('Failed to load stats.'); setLoading(false); });
+    const controller = new AbortController();
+    fetch(`${API_BASE_URL}/stats?period=${period}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Stats unavailable');
+        const payload = await response.json();
+        if (
+          ![
+            payload.uniqueUsers,
+            payload.swapVolumeUsd,
+            payload.swapCount,
+          ].every(
+            (value) =>
+              typeof value === 'number' && Number.isFinite(value) && value >= 0
+          )
+        )
+          throw new Error('Invalid stats');
+        return payload as StatsData;
+      })
+      .then((payload) => {
+        setData(payload);
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          setError(
+            'Stats are temporarily unavailable. Please try again later.'
+          );
+          setLoading(false);
+        }
+      });
+    return () => controller.abort();
   }, [period]);
 
   return (
@@ -51,13 +80,16 @@ export function StatsView({ onBack }: Props) {
       exit={{ opacity: 0, y: -8 }}
       transition={{ duration: 0.2 }}
       className="hf-content hf-stats-wrap"
+      id="main-content"
     >
-      <button className="hf-stats-close" onClick={onBack} aria-label="Close">✕</button>
+      <button className="hf-stats-close" onClick={onBack} aria-label="Close">
+        ✕
+      </button>
 
       <div className="hf-stats-header">
         <div className="hf-stats-header-left">
-          <p className="hf-kicker">Public Dashboard</p>
-          <h2 className="hf-stats-title">Platform Stats</h2>
+          <p className="hf-kicker">RECORDED ACTIVITY</p>
+          <h2 className="hf-stats-title">Bridge stats.</h2>
           <p className="hf-stats-range">{PERIOD_LABELS[period]}</p>
         </div>
         <div className="hf-stats-periods">
@@ -81,22 +113,31 @@ export function StatsView({ onBack }: Props) {
           <div className="hf-stats-grid">
             <div className="hf-stat-card">
               <p className="hf-stat-card-label">Unique Users</p>
-              <p className="hf-stat-card-value">{data.uniqueUsers.toLocaleString()}</p>
+              <p className="hf-stat-card-value">
+                {data.uniqueUsers.toLocaleString()}
+              </p>
             </div>
             <div className="hf-stat-card">
               <p className="hf-stat-card-label">Swap Volume</p>
-              <p className="hf-stat-card-value">{formatUsd(data.swapVolumeUsd)}</p>
-              <p className="hf-stat-card-sub">{data.swapCount.toLocaleString()} swaps</p>
+              <p className="hf-stat-card-value">
+                {formatUsd(data.swapVolumeUsd)}
+              </p>
+              <p className="hf-stat-card-sub">Across supported networks</p>
             </div>
             <div className="hf-stat-card hf-stat-card-free">
-              <p className="hf-stat-card-label">Protocol Fee</p>
-              <p className="hf-stat-card-value">$0</p>
-              <p className="hf-stat-card-free-badge">Zero. For now.</p>
+              <p className="hf-stat-card-label">Recorded swaps</p>
+              <p className="hf-stat-card-value">
+                {data.swapCount.toLocaleString()}
+              </p>
+              <p className="hf-stat-card-free-badge">
+                Submitted through Hopfast
+              </p>
             </div>
           </div>
 
           <p className="hf-stats-note">
-            Data reflects activity recorded through HopFast. Swap records are self-reported and are not independently verified platform volume.
+            Data reflects activity recorded through Hopfast. Swap records are
+            self-reported and are not independently verified platform volume.
           </p>
         </>
       )}

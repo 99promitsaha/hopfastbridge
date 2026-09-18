@@ -116,7 +116,7 @@ export function PrivyWalletConnector({
     return (
       <button onClick={login} className="hf-wallet-pill hf-wallet-pill-action">
         <Wallet2 size={14} />
-        Connect
+        Connect wallet
       </button>
     );
   }

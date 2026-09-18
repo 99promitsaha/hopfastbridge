@@ -7,6 +7,19 @@ const emptyToUndefined = (value: unknown) =>
   typeof value === 'string' && value.trim().length === 0 ? undefined : value;
 
 const schema = z.object({
+  ARCHITECT_ESCROW_ADDRESS: z.preprocess(emptyToUndefined, z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional()),
+  ARCHITECT_CHAIN_ID: z.coerce.number().default(5042),
+  ARCHITECT_SIGNER_KEY: z.preprocess(emptyToUndefined, z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional()),
+  ARCHITECT_ADMIN_ADDRESS: z.preprocess(emptyToUndefined, z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional()),
+  ARCHITECT_TREASURY_ADDRESS: z.preprocess(emptyToUndefined, z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional()),
+  X_BEARER_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
+  X_CLIENT_ID: z.preprocess(emptyToUndefined, z.string().optional()),
+  X_CLIENT_SECRET: z.preprocess(emptyToUndefined, z.string().optional()),
+  X_BOT_ACCESS_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
+  X_BOT_REFRESH_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
+  X_BOT_TOKEN_STORE_PATH: z.string().default('./data/x-bot-tokens.json'),
+  X_DELIVERY_ENABLED: z.enum(['true','false']).default('false').transform(value=>value==='true'),
+  X_CALLBACK_URL: z.string().url().default('http://127.0.0.1:8080/api/architects/x/callback'),
   ARC_RPC_URL: z.string().url().default('https://rpc.mainnet.arc.io'),
   APP_BASE_URL: z.string().url().default('http://localhost:5173'),
   PAYMENT_STORE_PATH: z.string().default('./data/payments.json'),

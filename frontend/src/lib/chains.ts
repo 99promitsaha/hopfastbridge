@@ -1,6 +1,6 @@
 export const NATIVE_TOKEN_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 
-export type ChainKey = 'base' | 'bsc' | 'ethereum' | 'polygon' | 'monad';
+export type ChainKey = 'base' | 'bsc' | 'ethereum' | 'polygon' | 'monad' | 'arc';
 
 export interface TokenOption {
   symbol: string;
@@ -128,13 +128,6 @@ const BASE_TOKENS: TokenOption[] = [
     address: '0x4200000000000000000000000000000000000006',
     decimals: 18,
     logoURI: '/token-icons/weth.png'
-  },
-  {
-    symbol: 'VIRTUAL',
-    name: 'Virtuals Protocol',
-    address: '0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b',
-    decimals: 18,
-    logoURI: '/token-icons/virtual.png'
   },
   {
     symbol: 'AERO',
@@ -290,7 +283,12 @@ const MONAD_TOKENS: TokenOption[] = [
   }
 ];
 
+export const ARC_USDC_ADDRESS = '0x3600000000000000000000000000000000000000';
 export const CHAINS: ChainOption[] = [
+  {
+    key: 'arc', name: 'Arc', chainId: 5042, logoURI: '/brand/arc-network.svg',
+    tokens: [{ symbol: 'USDC', name: 'USD Coin', address: ARC_USDC_ADDRESS, decimals: 6, logoURI: '/token-icons/usdc.svg' }]
+  },
   {
     key: 'ethereum',
     name: 'Ethereum',

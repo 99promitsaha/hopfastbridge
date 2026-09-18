@@ -5,10 +5,10 @@ export const HAS_PRIVY = Boolean(import.meta.env.VITE_PRIVY_APP_ID);
 export const IS_PROD = import.meta.env.PROD;
 
 export const DEFAULT_DRAFT: SwapDraft = {
-  fromChain: 'ethereum',
-  toChain: 'base',
-  fromTokenSymbol: 'ETH',
-  toTokenSymbol: 'ETH',
+  fromChain: 'base',
+  toChain: 'arc',
+  fromTokenSymbol: 'USDC',
+  toTokenSymbol: 'USDC',
   amount: ''
 };
 
@@ -27,6 +27,7 @@ export const PROVIDER_META: { key: ProviderKey; label: string; logo: string }[] 
 ];
 
 export const BLOCK_EXPLORER: Record<ChainKey, string> = {
+  arc: 'https://explorer.arc.io/tx/',
   ethereum: 'https://etherscan.io/tx/',
   base: 'https://basescan.org/tx/',
   bsc: 'https://bscscan.com/tx/',

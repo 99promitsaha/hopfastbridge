@@ -1,7 +1,8 @@
+import { quotedHopfastFeeUsd } from './hopfastFee.js';
 import { env } from '../config/env.js';
 import { assertCalldataRoutesToRecipient, assertValidRecipient, assertValidSender, InvalidRecipientError } from './recipientGuard.js';
 
-type ChainKey = 'ethereum' | 'base' | 'bsc' | 'polygon' | 'monad';
+type ChainKey = 'ethereum' | 'base' | 'bsc' | 'polygon' | 'monad' | 'arc';
 
 interface UnifiedQuotePayload {
   srcChainKey?: string;
@@ -20,14 +21,15 @@ interface UnifiedQuotePayload {
 
 interface LiFiFeeCost {
   amountUSD?: string;
+  percentage?: string;
+  included?: boolean;
 }
 
 interface LiFiQuoteResponse {
+  includedSteps?: Array<{ type?: string; tool?: string; estimate?: { feeCosts?: LiFiFeeCost[] } }>;
   id?: string;
-  tool?: {
-    name?: string;
-    key?: string;
-  };
+  tool?: string | { name?: string; key?: string };
+  toolDetails?: { name?: string; key?: string };
   estimate?: {
     toAmount?: string;
     toAmountMin?: string;
@@ -56,7 +58,8 @@ const CHAIN_ID_BY_KEY: Record<ChainKey, number> = {
   base: 8453,
   bsc: 56,
   polygon: 137,
-  monad: 143
+  monad: 143,
+  arc: 5042
 };
 
 function normalizeTokenAddress(address?: string): string {
@@ -114,6 +117,8 @@ export async function requestLiFiQuote(payload: UnifiedQuotePayload): Promise<{
     provider: 'lifi';
     routeSteps: Array<{ type: string }>;
     feeUsd: string;
+    networkFeeUsd: string;
+    hopfastFeeUsd: string;
     feePercent: string;
     duration: { estimated: string };
     dstAmount: string;
@@ -127,6 +132,9 @@ export async function requestLiFiQuote(payload: UnifiedQuotePayload): Promise<{
   }>;
   raw: LiFiQuoteResponse;
 }> {
+  const commissionRate = env.LIFI_FEE ?? 0;
+  if (commissionRate > 0 && !env.LIFI_INTEGRATOR) throw new Error('Missing LIFI_INTEGRATOR. Configure your LI.FI Portal integrator and receiving wallet to quote Hopfast fees.');
+  if (commissionRate > 0 && !/^[a-zA-Z0-9._-]{1,23}$/.test(env.LIFI_INTEGRATOR ?? '')) throw new Error('Invalid LIFI_INTEGRATOR. Use the LI.FI Portal integration string (maximum 23 characters), not its UUID.');
   const srcChainId = parseChainId(payload.srcChainKey);
   const dstChainId = parseChainId(payload.dstChainKey);
 
@@ -194,6 +202,8 @@ export async function requestLiFiQuote(payload: UnifiedQuotePayload): Promise<{
   }
   assertCalldataRoutesToRecipient(raw.transactionRequest?.data, toAddress, 'LI.FI');
 
+  const hopfastFeeUsd = quotedHopfastFeeUsd(raw, commissionRate);
+  if (hopfastFeeUsd == null) throw new Error('LI.FI did not confirm the configured Hopfast fee in its quote.');
   const feeUsd = calculateFeeUsd(raw.estimate);
   const durationSeconds = Number(raw.estimate.executionDuration ?? 90);
   const durationMilliseconds = Math.max(1000, Math.round(durationSeconds * 1000));
@@ -207,7 +217,7 @@ export async function requestLiFiQuote(payload: UnifiedQuotePayload): Promise<{
     ? (feeUsd / srcUsd) * 100
     : 0;
 
-  const routeType = raw.tool?.name ?? raw.tool?.key ?? 'LI.FI';
+  const routeType = raw.toolDetails?.name ?? (typeof raw.tool === 'string' ? raw.tool : raw.tool?.name ?? raw.tool?.key) ?? 'LI.FI';
 
   return {
     provider: 'lifi',
@@ -217,6 +227,8 @@ export async function requestLiFiQuote(payload: UnifiedQuotePayload): Promise<{
         provider: 'lifi',
         routeSteps: [{ type: routeType }],
         feeUsd: feeUsd.toFixed(6),
+        networkFeeUsd: calculateFeeUsd({ gasCosts: raw.estimate.gasCosts }).toFixed(6),
+        hopfastFeeUsd,
         feePercent: feePercent.toFixed(4),
         duration: { estimated: String(durationMilliseconds) },
         dstAmount: raw.estimate.toAmount,
