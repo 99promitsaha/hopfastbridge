@@ -65,7 +65,7 @@ export function TransactionHistoryModal({
   return (
     <Dialog
       className="hf-history-modal"
-      title="Your activity"
+      title="Bridge activity"
       onClose={onClose}
       headerExtra={
         activeWalletAddress ? (
@@ -92,7 +92,7 @@ export function TransactionHistoryModal({
         ) : historyError ? (
           <p className="hf-history-empty">{historyError}</p>
         ) : historyRecords.length === 0 ? (
-          <p className="hf-history-empty">Your next hop will appear here.</p>
+          <p className="hf-history-empty">Bridge transactions from this wallet will appear here.</p>
         ) : (
           <div className="hf-history-list">
             {historyRecords.map((record) => {
@@ -152,11 +152,11 @@ export function TransactionHistoryModal({
                         rel="noopener noreferrer"
                         className="hf-history-link"
                       >
-                        View on Explorer
+                        Open in explorer
                       </a>
                     ) : (
                       <span className="hf-history-link hf-history-link-muted">
-                        Explorer N/A
+                        Explorer unavailable
                       </span>
                     )}
                   </div>

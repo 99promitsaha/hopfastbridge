@@ -51,13 +51,13 @@ export function TokenSelector({
         <ChevronDown size={14} />
       </button>
       {open && (
-        <Dialog title="Select a token" onClose={() => setOpen(false)}>
+        <Dialog title="Choose an asset" onClose={() => setOpen(false)}>
           <p className="hf-dialog-sub">Available on {chain.name}</p>
           <label className="hf-dropdown-search-wrap">
             <Search size={17} />
             <input
               className="hf-dropdown-search"
-              placeholder="Search name or address"
+              placeholder="Search asset or contract"
               aria-label="Search tokens"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -88,7 +88,7 @@ export function TokenSelector({
             ))}
             {!filtered.length && (
               <p className="hf-dropdown-empty">
-                No tokens found. Try another search.
+                No matching assets on this network.
               </p>
             )}
           </div>
@@ -100,9 +100,9 @@ export function TokenSelector({
         </Dialog>
       )}
       {chainModalOpen && (
-        <Dialog title="Choose network" onClose={onChainModalClose}>
+        <Dialog title="Choose a network" onClose={onChainModalClose}>
           <p className="hf-dialog-sub">
-            Select where your USDC starts or lands.
+            Choose the network you are sending from or receiving on.
           </p>
           <div className="hf-dropdown-list">
             {chains.map((c) => (

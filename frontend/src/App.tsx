@@ -244,7 +244,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
           <button
             className={view === 'human' && !supportOpen ? 'active' : ''}
             aria-label="Bridge (live)"
-            aria-current={view === 'human' ? 'page' : undefined}
+            aria-current={view === 'human' && !supportOpen ? 'page' : undefined}
             onClick={() => {
               setView('human');
               setSupportOpen(false);
@@ -254,7 +254,6 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
           >
             <ArrowLeftRight size={15} />
             <span>Bridge</span>
-            <span className="hf-bridge-live-dot" aria-hidden="true" />
           </button>
           <button
             className={supportOpen ? 'active' : ''}
@@ -320,7 +319,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
       {swapOpen && (
         <Dialog
           className="hf-swap-modal"
-          title="Bridge to Arc"
+          title="Bridge USDC"
           onClose={closeSwap}
         >
           <SwapView
@@ -350,11 +349,6 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             error={error}
             executeSwap={handleExecuteSwap}
             onConnect={privyAuth.connectWallet}
-            onAgentClick={() => {
-              closeSwap();
-              setView('human');
-              setSupportOpen(true);
-            }}
             onToggleHistory={() => setHistoryOpen((prev) => !prev)}
             onTxStatusClear={clearTxStatus}
           />
@@ -364,7 +358,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
       {supportOpen && (
         <Dialog
           className="hf-support-modal"
-          title="Pay on Arc"
+          title="Pay someone on Arc"
           onClose={() => {
             setSupportOpen(false);
             setView('human');
@@ -386,7 +380,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
       )}
 
       {fundingNudge && !swapOpen && (
-        <aside className="hf-funding-nudge" aria-label="Back an Arc architect">
+        <aside className="hf-funding-nudge" aria-label="Pay someone on Arc">
           <button
             type="button"
             className="hf-nudge-dismiss"
@@ -395,8 +389,8 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
           >
             <X size={15} />
           </button>
-          <p>Your USDC has arrived on Arc.</p>
-          <h3>Any architect you wish to fund on Arc?</h3>
+          <p>Your USDC is now on Arc.</p>
+          <h3>Ready to pay someone?</h3>
           <button
             type="button"
             onClick={() => {
@@ -404,9 +398,9 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
               setSupportOpen(true);
             }}
           >
-            Preview a USDC envelope <ArrowUpRight size={14} />
+            Create a payment <ArrowUpRight size={14} />
           </button>
-          <small>Coming soon</small>
+          <small>Send by X username. They claim on Arc.</small>
         </aside>
       )}
 
@@ -469,9 +463,11 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
       {/* Footer */}
       <footer className="hf-footer">
         <div className="hf-footer-brand">
-          <span>Built for</span>
-          <img src="/brand/arc-logo.svg" alt="Arc" />
-          <span className="hf-footer-beta">Beta</span>
+          <img className="hf-footer-hopfast" src="/brand/hopfast-mark.svg" alt="" />
+          <div><strong>hopfast.</strong><span>USDC in. Payments out. Built on Arc.</span></div>
+        </div>
+        <div className="hf-footer-arc" aria-label="Built on Arc">
+          <span>BUILT ON</span><img src="/brand/arc-logo.svg" alt="Arc" />
         </div>
         <div className="hf-footer-links">
           <a

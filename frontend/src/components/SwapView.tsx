@@ -8,8 +8,6 @@ import {
   ExternalLink,
   History,
   ArrowRight,
-  ArrowUpRight,
-  Bot,
   ShieldCheck,
   Loader2,
   Radio,
@@ -69,7 +67,6 @@ interface SwapViewProps {
   error: string;
   executeSwap: () => void;
   onConnect: () => void;
-  onAgentClick: () => void;
   onToggleHistory: () => void;
   onTxStatusClear: () => void;
 }
@@ -101,7 +98,6 @@ export function SwapView({
   error,
   executeSwap,
   onConnect,
-  onAgentClick,
   onToggleHistory,
   onTxStatusClear,
 }: SwapViewProps) {
@@ -460,121 +456,13 @@ export function SwapView({
       transition={{ duration: 0.18 }}
     >
       <div className="hf-workspace">
-        <aside className="hf-workspace-intro">
-          <p className="hf-eyebrow">
-            <span /> Bridge to Arc
-          </p>
-          <h1>
-            Bridge from anywhere.
-            <br />
-            <span>To Arc.</span>
-          </h1>
-          <p className="hf-intro-description">
-            Swap across networks, bring USDC to Arc, and compare available
-            routes in one place.
-          </p>
-          <div className="hf-flow-art" aria-hidden="true">
-            <svg viewBox="0 0 440 180" fill="none">
-              <path
-                d="M42 30H96C160 30 134 90 220 90H356M42 90H356M42 150H96C160 150 134 90 220 90H356"
-                stroke="url(#flow)"
-                strokeWidth="1.5"
-              />
-              <defs>
-                <linearGradient id="flow" x1="40" y1="90" x2="356" y2="90">
-                  <stop stopColor="#d5deeb" />
-                  <stop offset="1" stopColor="#6484b9" />
-                </linearGradient>
-              </defs>
-              <circle cx="208" cy="90" r="4" fill="#fff" stroke="#6484b9" />
-            </svg>
-            <span className="hf-flow-source hf-flow-source--one">
-              <img src="/chains/base.svg" alt="" />
-            </span>
-            <span className="hf-flow-source hf-flow-source--two">
-              <img src="/token-icons/eth.svg" alt="" />
-            </span>
-            <span className="hf-flow-source hf-flow-source--three">
-              <img src="/chains/polygon.svg" alt="" />
-            </span>
-            <span className="hf-flow-destination">
-              <img src="/brand/arc-network.svg" alt="" />
-              <span>Arc</span>
-            </span>
-            <span className="hf-flow-caption">A new home for your USDC.</span>
-          </div>
-          <div className="hf-starter-routes">
-            <p className="hf-section-label">START WITH A ROUTE</p>
-            {(
-              [
-                {
-                  chain: 'base',
-                  token: 'USDC',
-                  label: 'Base',
-                  icon: '/chains/base.svg',
-                },
-                {
-                  chain: 'ethereum',
-                  token: 'ETH',
-                  label: 'Ethereum',
-                  icon: '/token-icons/eth.svg',
-                },
-                {
-                  chain: 'polygon',
-                  token: 'USDC',
-                  label: 'Polygon',
-                  icon: '/chains/polygon.svg',
-                },
-              ] as const
-            ).map((route) => (
-              <button
-                key={route.chain}
-                disabled={isExecuting}
-                className={`hf-starter-route ${draft.fromChain === route.chain && draft.toChain === 'arc' && draft.fromTokenSymbol === route.token ? 'active' : ''}`}
-                onClick={() => {
-                  const next: SwapDraft = {
-                    fromChain: route.chain,
-                    toChain: 'arc',
-                    fromTokenSymbol: route.token,
-                    toTokenSymbol: 'USDC',
-                    amount: '',
-                  };
-                  setDraft(next);
-                  triggerFetchImmediate(next);
-                  onTxStatusClear();
-                }}
-              >
-                <span className="hf-starter-source">
-                  <img src={route.icon} alt="" />
-                  {route.label}
-                  <small>{route.token}</small>
-                </span>
-                <ArrowRight size={14} />
-                <span className="hf-starter-target">
-                  <img src="/brand/arc-network.svg" alt="" />
-                  Arc<small>USDC</small>
-                </span>
-              </button>
-            ))}
-          </div>
-          <button className="hf-agent-teaser" onClick={onAgentClick}>
-            <span className="hf-agent-teaser-icon">
-              <Bot size={20} />
-            </span>
-            <span>
-              <strong>Bring your agent along.</strong>
-              <small>Research, plan, and move with more context.</small>
-            </span>
-            <ArrowUpRight size={18} />
-          </button>
-        </aside>
         <div className="hf-swap-wrap">
           <div className="hf-swap-column">
             <div className="hf-swap-card">
               <div className="hf-swap-card-header">
                 <div>
-                  <p className="hf-section-label">MAKE YOUR NEXT MOVE</p>
-                  <h2 className="hf-swap-title">Swap & bridge</h2>
+                  <p className="hf-section-label">LIVE ROUTE COMPARISON</p>
+                  <h2 className="hf-swap-title">Move USDC</h2>
                 </div>
                 <button
                   className="hf-card-corner-btn"
@@ -662,7 +550,7 @@ export function SwapView({
                 {/* You Pay */}
                 <div className="hf-field-group hf-field-group--top">
                   <div className="hf-field-header">
-                    <span className="hf-field-kicker">You pay</span>
+                    <span className="hf-field-kicker">You send</span>
                     <button
                       className="hf-chain-btn"
                       disabled={isExecuting}
@@ -928,7 +816,7 @@ export function SwapView({
                   <>Connect wallet to bridge</>
                 ) : bestQuote && !isQuoting ? (
                   <>
-                    Review swap <ArrowRight size={17} />
+                    Review route <ArrowRight size={17} />
                   </>
                 ) : isQuoting ? (
                   <>
@@ -1102,7 +990,7 @@ export function SwapView({
 
             <div className="hf-beta-notice" role="note">
               <ShieldCheck size={13} />
-              <span>Your wallet signs every move. Beta, unaudited.</span>
+              <span>Self-custodial beta. Review the route before signing.</span>
             </div>
           </div>
 
@@ -1118,7 +1006,7 @@ export function SwapView({
                 transition={{ type: 'spring', stiffness: 360, damping: 32 }}
               >
                 <div className="hf-routes-panel-header">
-                  <h3>Route options</h3>
+                  <h3>Available routes</h3>
                   {anyQuote && (
                     <span>
                       {sortedRoutes.length} available{' '}
@@ -1131,8 +1019,8 @@ export function SwapView({
                     {allFailed
                       ? 'No route found for this amount. Try another amount or asset.'
                       : hasConnectedWallet
-                        ? 'Enter an amount to compare live quotes.'
-                        : 'Connect your wallet to see quotes for this route.'}
+                        ? 'Enter an amount to compare available routes.'
+                        : 'Connect a wallet to compare routes for this transfer.'}
                   </p>
                 )}
 

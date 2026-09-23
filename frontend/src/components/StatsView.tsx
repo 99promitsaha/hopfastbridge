@@ -88,9 +88,9 @@ export function StatsView({ onBack }: Props) {
 
       <div className="hf-stats-header">
         <div className="hf-stats-header-left">
-          <p className="hf-kicker">RECORDED ACTIVITY</p>
-          <h2 className="hf-stats-title">What moved through Hopfast.</h2>
-          <p className="hf-stats-range">{PERIOD_LABELS[period]} · activity recorded by this app</p>
+          <p className="hf-kicker">HOPFAST ON ARC</p>
+          <h2 className="hf-stats-title">Money moving through Hopfast.</h2>
+          <p className="hf-stats-range">{PERIOD_LABELS[period]} · recorded through Hopfast</p>
         </div>
         <div className="hf-stats-periods">
           {(['7d', '15d', '30d'] as Period[]).map((p) => (
@@ -105,39 +105,38 @@ export function StatsView({ onBack }: Props) {
         </div>
       </div>
 
-      {loading && <p className="hf-stats-loading">Loading...</p>}
+      {loading && <p className="hf-stats-loading">Loading activity…</p>}
       {error && <p className="hf-stats-error">{error}</p>}
 
       {data && !loading && (
         <>
           <div className="hf-stats-grid">
             <div className="hf-stat-card">
-              <p className="hf-stat-card-label">Wallets served</p>
+              <p className="hf-stat-card-label">Connected wallets</p>
               <p className="hf-stat-card-value">
                 {data.uniqueUsers.toLocaleString()}
               </p>
             </div>
             <div className="hf-stat-card">
-              <p className="hf-stat-card-label">Value routed</p>
+              <p className="hf-stat-card-label">USDC value routed</p>
               <p className="hf-stat-card-value">
                 {formatUsd(data.swapVolumeUsd)}
               </p>
-              <p className="hf-stat-card-sub">Submitted across supported networks</p>
+              <p className="hf-stat-card-sub">Across supported source networks</p>
             </div>
             <div className="hf-stat-card hf-stat-card-free">
-              <p className="hf-stat-card-label">Routes submitted</p>
+              <p className="hf-stat-card-label">Bridge transactions</p>
               <p className="hf-stat-card-value">
                 {data.swapCount.toLocaleString()}
               </p>
               <p className="hf-stat-card-free-badge">
-                Submitted through Hopfast
+                Recorded through Hopfast
               </p>
             </div>
           </div>
 
           <p className="hf-stats-note">
-            Data reflects activity recorded through Hopfast. Swap records are
-            self-reported and are not independently verified platform volume.
+            This dashboard reports activity recorded by Hopfast. It is an operational view, not independently verified onchain analytics.
           </p>
         </>
       )}

@@ -54,17 +54,17 @@ export function ArchitectDeposits({
     <section className="hf-architect-deposits">
       <header>
         <div>
-          <span>SENT FROM THIS WALLET</span>
-          <h2>Your payments</h2>
-          <p>Review payment status, recover a saved claim link, or reclaim unclaimed USDC after 30 days.</p>
+          <span>PAID FROM THIS WALLET</span>
+          <h2>Sent payments</h2>
+          <p>See what is waiting, copy a claim link again, or manage a payment after its claim window ends.</p>
         </div>
         <button className="hf-deposits-load" disabled={!wallet || busy} onClick={load}>
           <RefreshCw size={14} className={busy ? "hf-spin" : ""} />
-          {busy ? "Loading…" : loaded ? "Refresh" : wallet ? "Load payments" : "Connect wallet first"}
+          {busy ? "Loading…" : loaded ? "Refresh" : wallet ? "Load payments" : "Connect to load"}
         </button>
       </header>
       {error && <p role="alert">{error}</p>}
-      {loaded && items.length === 0 && <div className="hf-deposits-empty"><WalletEmptyIcon /><h3>No payments from this wallet yet.</h3><p>Your funded envelopes will appear here.</p></div>}
+      {loaded && items.length === 0 && <div className="hf-deposits-empty"><WalletEmptyIcon /><h3>No Arc payments yet.</h3><p>Payments sent from this wallet will appear here.</p></div>}
       <div className="hf-deposits-list">
         {items.map((e) => {
           let saved: { claimUrl?: string } | null = null;
@@ -75,21 +75,21 @@ export function ArchitectDeposits({
             );
           } catch {}
           const net =
-            BigInt(e.gross) - (BigInt(e.gross) * 250n + 9999n) / 10000n;
+            BigInt(e.gross) - (BigInt(e.gross) * BigInt(config.feeBps) + 9999n) / 10000n;
           return (
             <article key={e.envelopeId} className="hf-deposit-card">
               <div className="hf-deposit-main"><span className={`hf-deposit-status state-${e.state}`} /> <div><small>PAYMENT TO</small><h3>@{e.handle}</h3></div></div>
               <strong>{formatUnits(net, 6)} <small>USDC</small></strong>
               <p className="hf-deposit-state">
                 {e.state === 0
-                  ? "Draft · not funded"
+                  ? "Draft · awaiting deposit"
                   : e.state === 1
-                    ? `Unclaimed · ${Date.now() >= e.expiresAt ? "reclaim available" : `claim until ${new Date(e.expiresAt).toLocaleDateString()}`}`
+                    ? `Waiting to be claimed · ${Date.now() >= e.expiresAt ? "claim window ended" : `available until ${new Date(e.expiresAt).toLocaleDateString()}`}`
                     : e.state === 2
                       ? "Claimed"
                       : e.state === 3
                         ? "Reclaimed"
-                        : "Recovered by admin"}
+                        : "Admin recovery completed"}
               </p>
               <small className="hf-deposit-id">{e.envelopeId}</small>
               <div className="hf-deposit-actions">

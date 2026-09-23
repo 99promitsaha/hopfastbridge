@@ -32,11 +32,7 @@ export function Dialog({
           'button:not(:disabled), input, a[href], [tabindex="0"]'
         ) ?? []
       );
-    (
-      panel?.querySelector<HTMLElement>('input') ??
-      controls()[0] ??
-      panel
-    )?.focus();
+    panel?.focus();
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeRef.current();
       if (e.key !== 'Tab') return;

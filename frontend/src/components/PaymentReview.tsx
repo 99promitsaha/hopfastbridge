@@ -233,15 +233,15 @@ export function PaymentReview({
           <X size={18} />
         </button>
         <p className="hf-kicker">
-          <Shield size={14} /> Your wallet. Your approval.
+          <Shield size={14} /> Private Arc payment
         </p>
-        <h1>Review payment</h1>
+        <h1>Confirm this Arc payment</h1>
         <p className="hf-payment-sub">
-          Review the recipient and amount before signing.
+          Check the amount, recipient, and note before you open your wallet.
         </p>
         {!payment && !error && (
           <p>
-            <Loader2 size={16} className="hf-spin" /> Loading payment…
+            <Loader2 size={16} className="hf-spin" /> Loading payment details…
           </p>
         )}
         {payment && (
@@ -260,13 +260,13 @@ export function PaymentReview({
                 />
                 Arc mainnet
               </dd>
-              <dt>From</dt>
+              <dt>Sender</dt>
               <dd>{payment.walletAddress}</dd>
-              <dt>To</dt>
+              <dt>Recipient</dt>
               <dd>{payment.recipient}</dd>
               {payment.memo && (
                 <>
-                  <dt>Note</dt>
+                  <dt>Message</dt>
                   <dd>{payment.memo}</dd>
                 </>
               )}
@@ -276,7 +276,7 @@ export function PaymentReview({
               <dd>{new Date(payment.expiresAt).toLocaleString()}</dd>
             </dl>
             <p className="hf-payment-sub">
-              Gas is paid in USDC in addition to the payment.
+              Arc gas is paid separately in USDC.
               {estimatedFee && ` Maximum gas reserve: ${estimatedFee} USDC.`}
             </p>
             {payment.trackingMessage && (
@@ -309,7 +309,7 @@ export function PaymentReview({
                     ? 'Checking wallet…'
                     : submittedHash
                       ? 'Retry transaction verification'
-                      : 'Review in wallet'}
+                      : 'Approve in wallet'}
                 </button>
                 {!submittedHash && (
                   <button
@@ -317,7 +317,7 @@ export function PaymentReview({
                     disabled={busy}
                     onClick={() => void cancel()}
                   >
-                    Decline
+                    Cancel request
                   </button>
                 )}
               </div>

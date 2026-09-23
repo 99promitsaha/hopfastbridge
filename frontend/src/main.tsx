@@ -10,6 +10,7 @@ import App from './App';
 import { MotionConfig } from 'framer-motion';
 import { AppProviders } from './components/AppProviders';
 import './index.css';
+import './design-overhaul.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

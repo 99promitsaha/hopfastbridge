@@ -106,10 +106,10 @@ export function ArchitectDeployment({
     <main className="hf-content hf-architect-claim">
       <section className="hf-pay-x-form">
         <p className="hf-landing-kicker">LOCAL ADMIN SETUP</p>
-        <h1>Deploy the Support Architect escrow.</h1>
+        <h1>Deploy the Pay on Arc escrow.</h1>
         <p>
           Arc mainnet · chain 5042. This creates the contract and spends USDC
-          for gas. No envelope funds are deposited.
+          for gas. No payment funds are deposited during setup.
         </p>
         {plan && (
           <>
@@ -123,8 +123,8 @@ export function ArchitectDeployment({
             </p>
             <small>
               2.5% is forwarded at deposit. 97.5% stays in escrow. Claims close
-              after 30 days; expired funder reclaim stays available. Admin
-              recovery waits seven days after queuing an expired envelope. The
+              after 30 days; the sender can retrieve an expired payment. Admin
+              recovery waits seven days after queuing an expired payment. The
               admin can replace the claim signer and must be trusted.
             </small>
           </>

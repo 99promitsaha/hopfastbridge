@@ -18,6 +18,7 @@ interface PrivyWalletLike {
   chainId: string;
   switchChain: (targetChainId: `0x${string}` | number) => Promise<void>;
   getEthereumProvider: () => Promise<EthereumProvider>;
+  disconnect?: () => Promise<void>;
 }
 
 function shortAddress(address: string): string {
@@ -61,13 +62,13 @@ export function PrivyWalletConnector({
   onWalletAddress: (address: string | null) => void;
   onWalletBridge?: (wallet: PrivyWalletBridge | null) => void;
 }) {
-  const { ready, authenticated, logout, user } = usePrivy();
+  const { ready, logout, user } = usePrivy();
   const { wallets } = useWallets();
   const [connectError, setConnectError] = useState('');
   const { connectOrCreateWallet } = useConnectOrCreateWallet({
     onSuccess: async () => setConnectError(''),
     onError: async (error) => setConnectError(
-      error ? `Wallet connection failed (${String(error).replace(/_/g, ' ')}).` : 'Wallet connection failed.'
+      error ? `Wallet connection failed (${String(error).replace(/_/g, ' ')}).` : 'We could not connect that wallet. Try again.'
     ),
   });
 
@@ -118,7 +119,7 @@ export function PrivyWalletConnector({
   }, [activeWallet, onWalletBridge]);
 
   if (!ready) {
-    return <div className="hf-wallet-pill hf-wallet-pill-muted">Loading…</div>;
+    return <div className="hf-wallet-pill hf-wallet-pill-muted">Preparing wallet…</div>;
   }
 
   if (!walletAddress) {
@@ -132,26 +133,46 @@ export function PrivyWalletConnector({
           className="hf-wallet-pill hf-wallet-pill-action"
         >
           <Wallet2 size={14} />
-          Connect wallet
+          Connect
         </button>
         {connectError && <span role="alert">{connectError}</span>}
       </div>
     );
   }
 
-  return (
-    <button onClick={() => { if (authenticated) void logout(); }} className="hf-wallet-pill" title={authenticated ? 'Disconnect wallet' : 'Wallet connected'}>
-      <span style={{
-        width: 6,
-        height: 6,
-        borderRadius: '999px',
-        background: '#22c55e',
-        display: 'inline-block',
-        flexShrink: 0
-      }} />
+  const connectedLabel = (
+    <>
+      <span className="hf-wallet-status-dot" aria-hidden="true" />
       {shortAddress(walletAddress)}
-      {authenticated && <LogOut size={13} />}
-    </button>
+    </>
+  );
+
+  async function disconnectWallet() {
+    setConnectError('');
+    try {
+      await activeWallet?.disconnect?.();
+      await logout();
+    } catch {
+      setConnectError('We could not disconnect the wallet. Please try again.');
+    }
+  }
+
+  return (
+    <div className="hf-wallet-connect-wrap">
+      <button
+        type="button"
+        onClick={() => void disconnectWallet()}
+        className="hf-wallet-pill hf-wallet-pill-connected"
+        aria-label={`Disconnect wallet ${shortAddress(walletAddress)}`}
+        title="Disconnect wallet"
+      >
+        {connectedLabel}
+        <span className="hf-wallet-disconnect-icon" aria-hidden="true">
+          <LogOut size={14} />
+        </span>
+      </button>
+      {connectError && <span role="alert">{connectError}</span>}
+    </div>
   );
 }
 
@@ -159,7 +180,7 @@ export function DemoWalletConnector() {
   return (
     <div className="hf-wallet-pill hf-wallet-pill-muted">
       <Wallet2 size={13} />
-      Demo Mode
+      Preview mode
     </div>
   );
 }
