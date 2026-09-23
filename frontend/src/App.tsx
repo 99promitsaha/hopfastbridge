@@ -189,9 +189,9 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
       bestQuote,
       selectedFromToken,
       requestedAmountRaw,
-      () => privyAuth.login(),
+      () => privyAuth.connectWallet(),
       HAS_PRIVY,
-      privyAuth.authenticated,
+      Boolean(walletBridge),
       isAmountInsufficient,
       volumeUsd
     );
@@ -288,11 +288,11 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
 
       {/* Main Content */}
       <AnimatePresence mode="wait">
-        {view === 'deployment' && <ArchitectDeployment wallet={walletBridge} onConnect={privyAuth.login} />}
+        {view === 'deployment' && <ArchitectDeployment wallet={walletBridge} onConnect={privyAuth.connectWallet} />}
         {view === 'payment' && (
           <PaymentReview
             walletBridge={walletBridge}
-            onConnect={HAS_PRIVY ? privyAuth.login : undefined}
+            onConnect={HAS_PRIVY ? privyAuth.connectWallet : undefined}
             onBack={handleBack}
           />
         )}
@@ -349,7 +349,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             txStatus={txStatus}
             error={error}
             executeSwap={handleExecuteSwap}
-            onConnect={privyAuth.login}
+            onConnect={privyAuth.connectWallet}
             onAgentClick={() => {
               closeSwap();
               setView('human');
@@ -380,7 +380,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             }}
             initialHandle={envelopeHandle}
             wallet={walletBridge}
-            onConnect={HAS_PRIVY ? privyAuth.login : undefined}
+            onConnect={HAS_PRIVY ? privyAuth.connectWallet : undefined}
           />
         </Dialog>
       )}
@@ -503,6 +503,7 @@ export default function App() {
         ready: true,
         authenticated: false,
         login: () => {},
+        connectWallet: () => {},
         logout: async () => {},
       }}
     />

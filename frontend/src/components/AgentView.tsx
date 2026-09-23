@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Copy, Gift, Send, WalletCards } from 'lucide-react';
+import { Check, Copy, Gift, MessageCircle, Send, WalletCards } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { architectApi, escrowWrite, walletProof, type ArchitectConfig } from '../services/architectService';
 import { fundingAmounts } from '../lib/builderFunding';
 import type { PrivyWalletBridge } from './WalletConnector';
@@ -15,8 +16,8 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
   const claimError = new URLSearchParams(location.search).has('claimError');
   const [tab, setTab] = useState<'send' | 'mine'>('send');
   const [handle, setHandle] = useState(initialHandle);
-  const [amount, setAmount] = useState('25');
-  const [message, setMessage] = useState('Your work on Arc caught my eye. Here’s a small grant to help you keep building.');
+  const [amount, setAmount] = useState('500');
+  const [message, setMessage] = useState('Sent to you on Arc with Hopfast.');
   const [config, setConfig] = useState<ArchitectConfig>({ ready: false, chainId: 5042, rpcUrl: 'https://rpc.mainnet.arc.io', feeBps: 250 });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -68,8 +69,8 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
   }
 
   function reset() {
-    setHandle(''); setAmount('25');
-    setMessage('Your work on Arc caught my eye. Here’s a small grant to help you keep building.');
+    setHandle(''); setAmount('500');
+    setMessage('Sent to you on Arc with Hopfast.');
     setPending(null); setClaimUrl(''); setFundedAccess(null); setError(''); setNotice('');
   }
 
@@ -83,22 +84,22 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
   return (
     <div className="hf-support-shell">
       {claimError && <p className="hf-support-error" role="alert">X verification did not complete. Open the original private envelope link and sign in with the recipient’s X account.</p>}
-      <div className="hf-support-tabs" role="tablist" aria-label="Support tools">
-        <button className={tab === 'send' ? 'active' : ''} onClick={() => setTab('send')} role="tab" aria-selected={tab === 'send'}><Gift size={15} /> Send an envelope</button>
-        <button className={tab === 'mine' ? 'active' : ''} onClick={() => setTab('mine')} role="tab" aria-selected={tab === 'mine'}><WalletCards size={15} /> Your envelopes</button>
+      <div className="hf-support-tabs" role="tablist" aria-label="Payment tools">
+        <button className={tab === 'send' ? 'active' : ''} onClick={() => setTab('send')} role="tab" aria-selected={tab === 'send'}><Gift size={15} /> Send payment</button>
+        <button className={tab === 'mine' ? 'active' : ''} onClick={() => setTab('mine')} role="tab" aria-selected={tab === 'mine'}><WalletCards size={15} /> Sent payments</button>
       </div>
       {tab === 'mine' ? <ArchitectDeposits config={config} wallet={wallet} /> : (
         <div className="hf-support-layout">
           <section className="hf-support-object" aria-label="Envelope preview">
-            <div className="hf-support-intro"><span>ARCHITECTS SUPPORTING ARCHITECTS</span><h2>Send more than money.</h2><p>A private message and USDC, addressed to their X handle. They verify that account and claim on Arc.</p></div>
-            <div className="hf-red-packet" aria-hidden="true"><div className="hf-red-packet-seal"><Gift size={23} /></div><span>FOR</span><strong>@{validHandle ? cleanHandle : 'architect'}</strong><small>{amounts?.amount ?? '—'} USDC TO CLAIM</small></div>
-            <div className="hf-support-card" aria-hidden="true"><div><span>hopfast</span><img src="/brand/arc-logo.svg" alt="" /></div><strong>{amounts?.amount ?? '25.00'} <small>USDC</small></strong><span>PRIVATE GRANT · ARC</span></div>
-            <p className="hf-support-safety"><Check size={14} /> Unclaimed funds can be reclaimed after 30 days.</p>
+            <div className="hf-support-intro"><span>PAY ON ARC</span><h2>Send USDC to a person.</h2><p>Address the payment to their X handle and add a message. They verify that account and claim to their wallet on Arc.</p></div>
+            <div className="hf-red-packet" aria-hidden="true"><div className="hf-red-packet-seal"><Gift size={23} /></div><span>FOR</span><strong>@{validHandle ? cleanHandle : 'username'}</strong><small>{amounts?.amount ?? '—'} USDC TO CLAIM</small></div>
+            <div className="hf-support-card" aria-hidden="true"><div><span>hopfast</span><img src="/brand/arc-logo.svg" alt="" /></div><strong>{amounts?.total ?? '500'} <small>USDC</small></strong><span>PRIVATE PAYMENT · ARC</span></div>
+            <div className="hf-support-safety"><p><Check size={14} /> Unclaimed funds can be reclaimed after 30 days.</p><p><MessageCircle size={14} /> If you’re unable to recover funds, <a href="https://t.me/promitsaha" target="_blank" rel="noopener noreferrer">drop us a message</a> and we’ll help.</p></div>
           </section>
           <form className="hf-support-form" onSubmit={(event) => { event.preventDefault(); void fund(); }}>
             {!claimUrl ? <>
-              <label htmlFor="envelope-handle">Architect’s X handle</label>
-              <div className="hf-support-field hf-support-handle"><img src="/brand/x.svg" alt="" /><input id="envelope-handle" disabled={busy || !!pending} value={handle} maxLength={16} placeholder="@jerallaire" onChange={(event) => setHandle(event.target.value)} /></div>
+              <label htmlFor="envelope-handle">Recipient’s X handle</label>
+              <div className="hf-support-field hf-support-handle"><img src="/brand/x.svg" alt="" /><input id="envelope-handle" disabled={busy || !!pending} value={handle} maxLength={16} placeholder="username" onChange={(event) => setHandle(event.target.value)} /></div>
               {handle && !validHandle && <small role="alert">Enter a valid X handle.</small>}
               <label htmlFor="envelope-amount">Amount to deposit</label>
               <div className="hf-support-field"><input id="envelope-amount" disabled={busy || !!pending} inputMode="decimal" value={amount} onChange={(event) => setAmount(event.target.value)} /><strong>USDC</strong></div>
@@ -106,12 +107,12 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
               <label htmlFor="envelope-message">Private message</label>
               <textarea id="envelope-message" disabled={busy || !!pending} maxLength={280} rows={4} value={message} onChange={(event) => setMessage(event.target.value)} />
               <div className="hf-support-count">{message.length}/280</div>
-              <dl className="hf-support-fees"><div><dt>Architect receives</dt><dd>{amounts?.amount ?? '—'} USDC</dd></div><div><dt>Hopfast fee · 2.5%</dt><dd>{amounts?.fee ?? '—'} USDC</dd></div><div><dt>You approve</dt><dd>{amounts?.total ?? '—'} USDC</dd></div></dl>
-              <button className="hf-support-primary" type="submit" disabled={busy || !config.ready || !validHandle || !amounts || !message.trim()}>{busy ? 'Finish in your wallet…' : wallet ? 'Fund envelope on Arc' : 'Connect wallet'} <Send size={15} /></button>
+              <dl className="hf-support-fees"><div><dt>Recipient receives</dt><dd>{amounts?.amount ?? '—'} USDC</dd></div><div><dt>Hopfast fee · 2.5%</dt><dd>{amounts?.fee ?? '—'} USDC</dd></div><div><dt>You approve</dt><dd>{amounts?.total ?? '—'} USDC</dd></div></dl>
+              <button className="hf-support-primary" type="submit" disabled={busy || !config.ready || !validHandle || !amounts || !message.trim()}>{busy ? 'Finish in your wallet…' : wallet ? 'Send payment on Arc' : 'Connect wallet'} <Send size={15} /></button>
               <button className="hf-support-secondary" type="button" onClick={onBack}>Bridge USDC to Arc first</button>
               <small className="hf-support-disclosure">The fee is deducted at deposit and is not refunded. Network gas is separate.</small>
             </> : (
-              <div className="hf-support-success"><div className="hf-support-success-icon"><Check size={22} /></div><span>ENVELOPE FUNDED</span><h3>Now put it in their hands.</h3><p>The claim link is private. The recipient must still verify @{cleanHandle} before the contract releases funds.</p><input aria-label="Private claim link" readOnly value={claimUrl} /><button className="hf-support-primary" type="button" onClick={deliver} disabled={busy || !config.deliveryEnabled}>Send privately on X <Send size={15} /></button><button className="hf-support-secondary" type="button" onClick={copyLink}><Copy size={14} /> Copy private link</button><button className="hf-support-reset" type="button" onClick={reset}>Create another envelope</button></div>
+              <div className="hf-support-success"><div className="hf-support-success-icon"><Check size={22} /></div><span>PAYMENT FUNDED</span><h3>Share the private claim.</h3><p>The recipient must verify @{cleanHandle} before the contract releases funds.</p><div className="hf-claim-qr"><QRCodeSVG value={claimUrl} size={148} bgColor="transparent" fgColor="#193760" level="M" /><small>Scan to open the private claim</small></div><input aria-label="Private claim link" readOnly value={claimUrl} /><button className="hf-support-primary" type="button" onClick={deliver} disabled={busy || !config.deliveryEnabled}>Send privately on X <Send size={15} /></button><button className="hf-support-secondary" type="button" onClick={copyLink}><Copy size={14} /> Copy private link</button><button className="hf-support-reset" type="button" onClick={reset}>Create another payment</button></div>
             )}
             {error && <p className="hf-support-error" role="alert">{error}</p>}
             {notice && <p className="hf-support-notice" role="status">{notice}</p>}

@@ -1,4 +1,5 @@
-import { ArrowRight, Check, Gift, Route, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Check, Gift, Globe2, Route, RotateCcw, ShieldCheck, UserRound } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import { architectApi, type ArchitectConfig } from '../services/architectService';
 
@@ -6,18 +7,40 @@ export function LandingView({ onBridge, onPayAnyone }: {
   onBridge: () => void; onPayAnyone: () => void;
 }) {
   const [supportReady, setSupportReady] = useState(false);
+  const [heroAction, setHeroAction] = useState<'Bridge to' | 'Pay on'>('Bridge to');
   useEffect(() => {
     architectApi<ArchitectConfig>('/config').then((config) => setSupportReady(config.ready)).catch(() => {});
+  }, []);
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setHeroAction((current) => current === 'Bridge to' ? 'Pay on' : 'Bridge to');
+    }, 2800);
+    return () => window.clearInterval(timer);
   }, []);
 
   return (
     <div className="hf-home hf-home-redesign">
       <section className="hf-new-hero" aria-labelledby="home-title">
         <div className="hf-new-hero-copy">
-          <p className="hf-home-eyebrow">Built for Arc</p>
-          <h1 id="home-title">Move money to Arc.<br />Pay anyone on Arc.</h1>
+          <p className="hf-home-eyebrow">Built on Arc. Ready for everywhere.</p>
+          <h1 id="home-title" className="hf-rotating-hero">
+            <span className="hf-rotating-copy" aria-live="polite">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.span
+                  key={heroAction}
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -18 }}
+                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {heroAction}
+                </motion.span>
+              </AnimatePresence>
+            </span>
+            <span className="hf-hero-arc"><img src="/brand/arc-logo.svg" alt="Arc" /></span>
+          </h1>
           <p>
-            Find a route into Arc, then send USDC directly to someone through a simple payment envelope.
+            Bring USDC into Arc from the network you already use, then send it to a person in one clear flow.
           </p>
           <div className="hf-new-actions">
             <button type="button" className="hf-home-primary" onClick={onBridge}>Bridge to Arc <ArrowRight size={17} /></button>
@@ -39,10 +62,20 @@ export function LandingView({ onBridge, onPayAnyone }: {
         </div>
       </section>
 
+      <section className="hf-payment-rail" aria-label="How money moves with Hopfast">
+        <article><div><Globe2 size={18} /></div><span>01</span><h2>Start anywhere.</h2><p>Compare live routes from the providers that can reach Arc.</p></article>
+        <i aria-hidden="true" />
+        <article><div><img src="/brand/arc-mark.svg" alt="" /></div><span>02</span><h2>Arrive in USDC.</h2><p>See the amount, route fees and timing before you approve.</p></article>
+        <i aria-hidden="true" />
+        <article><div><UserRound size={18} /></div><span>03</span><h2>Pay a username.</h2><p>They verify the account and claim to their wallet on Arc.</p></article>
+        <i aria-hidden="true" />
+        <article><div><RotateCcw size={18} /></div><span>04</span><h2>Stay in control.</h2><p>Track the payment and reclaim it after 30 days if needed.</p></article>
+      </section>
+
       <section className="hf-story" aria-labelledby="story-title">
         <div className="hf-story-heading">
           <p className="hf-home-eyebrow">WHAT HOPFAST IS FOR</p>
-          <h2 id="story-title">Bring money to Arc, then send it to the people you want to pay.</h2>
+          <h2 id="story-title">A route in. A direct payment out. One place to manage both.</h2>
         </div>
         <div className="hf-bento">
           <article className="hf-bento-card hf-bento-bridge">

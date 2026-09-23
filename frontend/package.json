@@ -16,6 +16,7 @@
     "@privy-io/react-auth": "^3.19.1",
     "framer-motion": "^12.7.4",
     "lucide-react": "^0.525.0",
+    "qrcode.react": "^4.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "viem": "^2.47.4"

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Copy, RefreshCw, RotateCcw } from "lucide-react";
 import { formatUnits } from "viem";
 import {
   architectApi,
@@ -18,6 +19,7 @@ export function ArchitectDeposits({
   const [items, setItems] = useState<Envelope[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   async function load() {
     if (!wallet) return;
     setBusy(true);
@@ -28,6 +30,7 @@ export function ArchitectDeposits({
         await walletProof(wallet),
       );
       setItems(data.envelopes);
+      setLoaded(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load envelopes.");
     } finally {
@@ -49,15 +52,20 @@ export function ArchitectDeposits({
   }
   return (
     <section className="hf-architect-deposits">
-      <div>
-        <h2>Your envelopes</h2>
-        <p>Review funded envelopes and reclaim unclaimed USDC after 30 days.</p>
-        <button disabled={!wallet || busy} onClick={load}>
-          {busy ? "Please wait…" : "Load my envelopes"}
+      <header>
+        <div>
+          <span>SENT FROM THIS WALLET</span>
+          <h2>Your payments</h2>
+          <p>Review payment status, recover a saved claim link, or reclaim unclaimed USDC after 30 days.</p>
+        </div>
+        <button className="hf-deposits-load" disabled={!wallet || busy} onClick={load}>
+          <RefreshCw size={14} className={busy ? "hf-spin" : ""} />
+          {busy ? "Loading…" : loaded ? "Refresh" : wallet ? "Load payments" : "Connect wallet first"}
         </button>
-      </div>
+      </header>
       {error && <p role="alert">{error}</p>}
-      <div>
+      {loaded && items.length === 0 && <div className="hf-deposits-empty"><WalletEmptyIcon /><h3>No payments from this wallet yet.</h3><p>Your funded envelopes will appear here.</p></div>}
+      <div className="hf-deposits-list">
         {items.map((e) => {
           let saved: { claimUrl?: string } | null = null;
           try {
@@ -69,11 +77,10 @@ export function ArchitectDeposits({
           const net =
             BigInt(e.gross) - (BigInt(e.gross) * 250n + 9999n) / 10000n;
           return (
-            <article key={e.envelopeId}>
-              <h3>
-                @{e.handle} · {formatUnits(net, 6)} USDC
-              </h3>
-              <p>
+            <article key={e.envelopeId} className="hf-deposit-card">
+              <div className="hf-deposit-main"><span className={`hf-deposit-status state-${e.state}`} /> <div><small>PAYMENT TO</small><h3>@{e.handle}</h3></div></div>
+              <strong>{formatUnits(net, 6)} <small>USDC</small></strong>
+              <p className="hf-deposit-state">
                 {e.state === 0
                   ? "Draft · not funded"
                   : e.state === 1
@@ -84,25 +91,35 @@ export function ArchitectDeposits({
                         ? "Reclaimed"
                         : "Recovered by admin"}
               </p>
-              <small>{e.envelopeId}</small>
+              <small className="hf-deposit-id">{e.envelopeId}</small>
+              <div className="hf-deposit-actions">
               {e.state === 1 && saved?.claimUrl && (
                 <button
                   onClick={() =>
                     navigator.clipboard.writeText(saved!.claimUrl!)
                   }
                 >
-                  Copy private claim link
+                  <Copy size={13} /> Copy claim link
                 </button>
               )}
               {e.state === 1 && Date.now() >= e.expiresAt && (
                 <button disabled={busy} onClick={() => reclaim(e.envelopeId)}>
-                  Reclaim {formatUnits(net, 6)} USDC
+                  <RotateCcw size={13} /> Reclaim {formatUnits(net, 6)} USDC
                 </button>
               )}
+              </div>
             </article>
           );
         })}
       </div>
     </section>
   );
+}
+
+function WalletEmptyIcon() {
+  return <div className="hf-deposits-empty-icon"><WalletCardsIcon /></div>;
+}
+
+function WalletCardsIcon() {
+  return <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" aria-hidden="true"><path d="M4 7.5h15a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-11a2 2 0 0 1 2-2h13"/><path d="M16 13h5"/><circle cx="16" cy="13" r=".8" fill="currentColor"/></svg>;
 }

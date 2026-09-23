@@ -1,6 +1,6 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LogOut, Wallet2 } from 'lucide-react';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useConnectOrCreateWallet, usePrivy, useWallets } from '@privy-io/react-auth';
 
 type EthereumProvider = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -44,10 +44,12 @@ function getWalletAddress(user: unknown): string | null {
  */
 export function usePrivyAuth() {
   const privy = usePrivy();
+  const { connectOrCreateWallet } = useConnectOrCreateWallet();
   return {
     ready: privy.ready,
     authenticated: privy.authenticated,
     login: privy.login,
+    connectWallet: connectOrCreateWallet,
     logout: privy.logout
   };
 }
@@ -59,8 +61,15 @@ export function PrivyWalletConnector({
   onWalletAddress: (address: string | null) => void;
   onWalletBridge?: (wallet: PrivyWalletBridge | null) => void;
 }) {
-  const { ready, authenticated, login, logout, user } = usePrivy();
+  const { ready, authenticated, logout, user } = usePrivy();
   const { wallets } = useWallets();
+  const [connectError, setConnectError] = useState('');
+  const { connectOrCreateWallet } = useConnectOrCreateWallet({
+    onSuccess: async () => setConnectError(''),
+    onError: async (error) => setConnectError(
+      error ? `Wallet connection failed (${String(error).replace(/_/g, ' ')}).` : 'Wallet connection failed.'
+    ),
+  });
 
   const activeWallet = useMemo<PrivyWalletLike | null>(() => {
     if (!wallets.length) return null;
@@ -112,17 +121,26 @@ export function PrivyWalletConnector({
     return <div className="hf-wallet-pill hf-wallet-pill-muted">Loading…</div>;
   }
 
-  if (!authenticated || !walletAddress) {
+  if (!walletAddress) {
     return (
-      <button onClick={login} className="hf-wallet-pill hf-wallet-pill-action">
-        <Wallet2 size={14} />
-        Connect wallet
-      </button>
+      <div className="hf-wallet-connect-wrap">
+        <button
+          onClick={() => {
+            setConnectError('');
+            connectOrCreateWallet();
+          }}
+          className="hf-wallet-pill hf-wallet-pill-action"
+        >
+          <Wallet2 size={14} />
+          Connect wallet
+        </button>
+        {connectError && <span role="alert">{connectError}</span>}
+      </div>
     );
   }
 
   return (
-    <button onClick={logout} className="hf-wallet-pill">
+    <button onClick={() => { if (authenticated) void logout(); }} className="hf-wallet-pill" title={authenticated ? 'Disconnect wallet' : 'Wallet connected'}>
       <span style={{
         width: 6,
         height: 6,
@@ -132,7 +150,7 @@ export function PrivyWalletConnector({
         flexShrink: 0
       }} />
       {shortAddress(walletAddress)}
-      <LogOut size={13} />
+      {authenticated && <LogOut size={13} />}
     </button>
   );
 }
