@@ -56,6 +56,9 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   const [envelopeHandle, setEnvelopeHandle] = useState('');
   const [fundingNudge, setFundingNudge] = useState(false);
   const nudgedHash = useRef<string | null>(null);
+  // Tracks whether the user clicked "Bridge" without a wallet — after
+  // connecting, the swap modal should open automatically.
+  const pendingSwapOpenRef = useRef(false);
 
   const activeWalletAddress = walletBridge?.address ?? walletAddress;
   const fromChain = CHAIN_BY_KEY[draft.fromChain];
@@ -157,6 +160,15 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [view]);
+
+  // Auto-open swap modal after wallet connects when the user clicked Bridge
+  // on the landing page without a wallet connected.
+  useEffect(() => {
+    if (activeWalletAddress && pendingSwapOpenRef.current) {
+      pendingSwapOpenRef.current = false;
+      setSwapOpen(true);
+    }
+  }, [activeWalletAddress]);
 
   // ── Swap execution wrapper ──
   const handleExecuteSwap = useCallback(() => {
@@ -309,7 +321,14 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             id="main-content"
           >
             <LandingView
-              onBridge={() => setSwapOpen(true)}
+              onBridge={() => {
+                if (HAS_PRIVY && !activeWalletAddress) {
+                  pendingSwapOpenRef.current = true;
+                  privyAuth.connectWallet();
+                } else {
+                  setSwapOpen(true);
+                }
+              }}
               onPayAnyone={() => setSupportOpen(true)}
             />
           </motion.main>

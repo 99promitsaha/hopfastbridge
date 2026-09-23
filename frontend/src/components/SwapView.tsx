@@ -709,6 +709,7 @@ export function SwapView({
                 {/* Swap Direction — sits on the divider between the two fields */}
                 <div className="hf-switch-anchor">
                   <button
+                    type="button"
                     className="hf-switch-btn"
                     onClick={swapDirections}
                     disabled={isExecuting}

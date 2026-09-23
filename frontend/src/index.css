@@ -1222,16 +1222,26 @@ input::placeholder {
   color: var(--hf-error);
 }
 .hf-switch-anchor {
-  height: 1px;
+  height: 32px;
   position: relative;
-  background: #e5eaf3;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin: 0 18px;
 }
-.hf-switch-btn {
+.hf-switch-anchor::before {
+  content: '';
   position: absolute;
-  left: 50%;
+  left: 0;
+  right: 0;
   top: 50%;
-  transform: translate(-50%, -50%);
+  height: 1px;
+  background: #e5eaf3;
+}
+.hf-switch-btn {
+  position: relative;
+  z-index: 1;
   width: 32px;
   height: 32px;
   display: grid;
@@ -1240,7 +1250,9 @@ input::placeholder {
   background: #fff;
   border: 3px solid var(--hf-bg-input);
   box-shadow: 0 0 0 1px #e5eaf3;
+  cursor: pointer;
   transition: color 180ms;
+  flex-shrink: 0;
 }
 .hf-switch-btn:hover {
   color: #537ebc;

@@ -93,14 +93,21 @@ export function LandingView({
           <div className="hf-terminal-glow" aria-hidden="true" />
           <div className="hf-terminal-shell">
             <div className="hf-terminal-route">
-              <div className="hf-terminal-route-path" aria-label="Base USDC routed through LI.FI to Arc USDC">
+              <div className="hf-terminal-route-path" aria-label="Base USDC routed to Arc USDC via LI.FI or Squid">
                 <span><img src="/chains/base.svg" alt="" /><strong>Base USDC</strong></span>
                 <ArrowRight size={14} aria-hidden="true" />
-                <span><img src="/providers/lifi.png" alt="" /><strong>LI.FI</strong></span>
+                <span className="hf-terminal-route-providers">
+                  <span className="hf-terminal-provider">
+                    <img src="/providers/lifi.png" alt="" /><strong>LI.FI</strong>
+                  </span>
+                  <span className="hf-terminal-provider-sep">or</span>
+                  <span className="hf-terminal-provider">
+                    <img src="/providers/squid.ico" alt="" /><strong>Squid</strong>
+                  </span>
+                </span>
                 <ArrowRight size={14} aria-hidden="true" />
                 <span><img src="/brand/arc-mark.svg" alt="" /><strong>Arc USDC</strong></span>
               </div>
-              <small>Cheapest route</small>
             </div>
             <div className="hf-terminal-people">
               <img
@@ -154,12 +161,30 @@ export function LandingView({
                 <Route size={15} />
                 <span><img src="/brand/arc-mark.svg" alt="" /><b>Arc</b><small>USDC</small></span>
               </div>
-              <div className="hf-route-preview-quote">
-                <span><img src="/providers/lifi.png" alt="" /> LI.FI</span>
-                <strong>499.73 USDC</strong>
-                <small>~2 min</small>
+              <div className="hf-route-preview-quotes">
+                <div className="hf-route-preview-quote hf-route-preview-quote--best">
+                  <span><img src="/providers/lifi.png" alt="" /></span>
+                  <div className="hf-route-preview-quote-info">
+                    <strong>LI.FI</strong>
+                    <small className="hf-route-preview-badge">Lowest cost</small>
+                  </div>
+                  <div className="hf-route-preview-quote-right">
+                    <strong>499.73 USDC</strong>
+                    <small className="hf-route-preview-time">~2 min</small>
+                  </div>
+                </div>
+                <div className="hf-route-preview-quote">
+                  <span><img src="/providers/squid.ico" alt="" /></span>
+                  <div className="hf-route-preview-quote-info">
+                    <strong>Squid</strong>
+                  </div>
+                  <div className="hf-route-preview-quote-right">
+                    <strong>498.91 USDC</strong>
+                    <small className="hf-route-preview-time">~3 min</small>
+                  </div>
+                </div>
               </div>
-              <div className="hf-route-preview-meta"><span>Fees itemised</span><span>Wallet approval</span></div>
+              <div className="hf-route-preview-meta"><span>Fees itemised</span></div>
             </div>
           </article>
 
@@ -188,7 +213,7 @@ export function LandingView({
                 <span><CircleDollarSign size={18} /></span>
                 <small>FOR</small>
                 <strong>@username</strong>
-                <em>487.50 USDC TO CLAIM</em>
+                <em>100 USDC TO CLAIM</em>
               </div>
             </div>
           </article>
