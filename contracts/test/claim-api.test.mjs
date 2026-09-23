@@ -194,20 +194,42 @@ test("API rejects stolen links, wallet replay, wrong X identity and reused OAuth
         draft.access,
       );
       assert.equal(start.status, 200);
-      const { url } = await start.json();
+      const { url: authorizeUrl } = await start.json();
+      const authorizeTarget = new URL(authorizeUrl);
+      const authorize = await actualFetch(
+        `${base}${authorizeTarget.pathname.replace("/api/architects", "")}${authorizeTarget.search}`,
+        { redirect: "manual" },
+      );
+      assert.equal(authorize.status, 302);
+      const url = authorize.headers.get("location");
       const state = new URL(url).searchParams.get("state");
       assert.equal(
         new URL(url).searchParams.get("code_challenge_method"),
         "S256",
       );
       const cookie =
-        cookieOverride ?? start.headers.get("set-cookie").split(";")[0];
+        cookieOverride ?? authorize.headers.get("set-cookie").split(";")[0];
       const callback = await actualFetch(
         `${base}/x/callback?state=${state}&code=fixture`,
         { headers: { Cookie: cookie }, redirect: "manual" },
       );
       return { callback, state, cookie };
     }
+    const invalidAuthorize = new URL(
+      (await (await post(
+        `/envelopes/${draft.envelopeId}/x`,
+        await proof(recipient),
+        draft.access,
+      )).json()).url,
+    );
+    invalidAuthorize.searchParams.set("browser", "wrong-browser");
+    assert.match(
+      (await actualFetch(
+        `${base}${invalidAuthorize.pathname.replace("/api/architects", "")}${invalidAuthorize.search}`,
+        { redirect: "manual" },
+      )).headers.get("location"),
+      /claimError/,
+    );
     assert.match(
       (await login("hf_x_state=wrong")).callback.headers.get("location"),
       /claimError/,

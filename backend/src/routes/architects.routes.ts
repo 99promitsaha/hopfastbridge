@@ -44,6 +44,10 @@ const read = async (id: string) =>
     functionName: "envelopes",
     args: [id],
   })) as [Address, Hex, bigint, bigint, number];
+router.use("/architects", (_req, res, next) => {
+  res.setHeader("Cache-Control", "no-store");
+  next();
+});
 async function xRequest(path: string, bearer: string) {
   const response = await fetch(`https://api.x.com/2/${path}`, {
     headers: { Authorization: `Bearer ${bearer}` },
@@ -370,6 +374,29 @@ router.post("/architects/envelopes/:id/x", async (req, res, next) => {
       browserHash: hash(browser),
       expiresAt: new Date(Date.now() + 600000),
     });
+    // The frontend and API are on different sites in production. A cookie set
+    // by this fetch can be rejected as a third-party cookie, so complete a
+    // first-party API navigation before redirecting to X.
+    const start = new URL("/api/architects/x/authorize", env.X_CALLBACK_URL);
+    start.searchParams.set("state", state);
+    start.searchParams.set("browser", browser);
+    res.json({ url: start.toString() });
+  } catch (e) {
+    next(e);
+  }
+});
+router.get("/architects/x/authorize", async (req, res) => {
+  res.setHeader("Referrer-Policy", "no-referrer");
+  try {
+    const state = String(req.query.state ?? "");
+    const browser = String(req.query.browser ?? "");
+    const auth = await ArchitectAuth.findOne({
+      tokenHash: hash(state),
+      kind: "oauth",
+      browserHash: hash(browser),
+      expiresAt: { $gt: new Date() },
+    });
+    if (!auth) throw new Error("X sign-in expired.");
     res.cookie("hf_x_state", browser, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
@@ -384,13 +411,13 @@ router.post("/architects/envelopes/:id/x", async (req, res, next) => {
       redirect_uri: env.X_CALLBACK_URL,
       scope: "tweet.read users.read",
       state,
-      code_challenge: createHash("sha256").update(verifier).digest("base64url"),
+      code_challenge: createHash("sha256").update(auth.verifier!).digest("base64url"),
       code_challenge_method: "S256",
     }))
       url.searchParams.set(k, v);
-    res.json({ url: url.toString() });
-  } catch (e) {
-    next(e);
+    res.redirect(url.toString());
+  } catch {
+    res.redirect(`${env.APP_BASE_URL}/?claimError=1`);
   }
 });
 router.get("/architects/x/callback", async (req, res) => {

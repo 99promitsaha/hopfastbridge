@@ -1,21 +1,73 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { env } from "../config/env.js";
+import { isDatabaseReady } from "../config/db.js";
+import { XBotToken } from "../models/ArchitectEnvelope.js";
 type Tokens = { clientId: string; accessToken: string; refreshToken?: string };
 let cached: Tokens | undefined;
 let refreshInProgress: Promise<Tokens> | undefined;
+const tokenKey = () =>
+  createHash("sha256")
+    .update(`hopfast-x-bot:${env.ARCHITECT_SIGNER_KEY ?? env.X_CLIENT_SECRET ?? ""}`)
+    .digest();
+function encrypt(value: Tokens) {
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", tokenKey(), iv);
+  const body = Buffer.concat([
+    cipher.update(JSON.stringify(value), "utf8"),
+    cipher.final(),
+  ]);
+  return Buffer.concat([iv, cipher.getAuthTag(), body]).toString("base64url");
+}
+function decrypt(payload: string): Tokens {
+  const data = Buffer.from(payload, "base64url");
+  const decipher = createDecipheriv("aes-256-gcm", tokenKey(), data.subarray(0, 12));
+  decipher.setAuthTag(data.subarray(12, 28));
+  return JSON.parse(
+    Buffer.concat([decipher.update(data.subarray(28)), decipher.final()]).toString("utf8"),
+  ) as Tokens;
+}
+async function readPersisted(): Promise<Tokens | undefined> {
+  if (isDatabaseReady()) {
+    try {
+      const saved = await XBotToken.findOne({ key: "delivery" }).lean();
+      if (saved?.payload) return decrypt(saved.payload);
+    } catch {}
+  }
+  try {
+    return JSON.parse(await fs.readFile(env.X_BOT_TOKEN_STORE_PATH, "utf8")) as Tokens;
+  } catch {
+    return undefined;
+  }
+}
+async function persist(value: Tokens) {
+  if (isDatabaseReady()) {
+    try {
+      await XBotToken.findOneAndUpdate(
+        { key: "delivery" },
+        { $set: { payload: encrypt(value) } },
+        { upsert: true },
+      );
+      return;
+    } catch {}
+  }
+  const file = env.X_BOT_TOKEN_STORE_PATH;
+  await fs.mkdir(path.dirname(file), { recursive: true });
+  const temporary = `${file}.tmp`;
+  await fs.writeFile(temporary, JSON.stringify(value), { mode: 0o600 });
+  await fs.chmod(temporary, 0o600);
+  await fs.rename(temporary, file);
+}
 async function tokens(): Promise<Tokens> {
   if (cached) return cached;
-  try {
-    const saved = JSON.parse(
-      await fs.readFile(env.X_BOT_TOKEN_STORE_PATH, "utf8"),
-    ) as Tokens;
-    if (
-      saved.clientId === env.X_CLIENT_ID &&
-      typeof saved.accessToken === "string"
-    )
-      return (cached = saved);
-  } catch {}
+  const saved = await readPersisted();
+  if (
+    saved &&
+    saved.clientId === env.X_CLIENT_ID &&
+    typeof saved.accessToken === "string"
+  )
+    return (cached = saved);
   if (!env.X_CLIENT_ID || !env.X_BOT_ACCESS_TOKEN)
     throw new Error("X delivery is not configured.");
   return (cached = {
@@ -56,12 +108,7 @@ async function refresh(): Promise<Tokens> {
       accessToken: body.access_token,
       refreshToken: body.refresh_token || previous.refreshToken,
     };
-    const file = env.X_BOT_TOKEN_STORE_PATH;
-    await fs.mkdir(path.dirname(file), { recursive: true });
-    const temporary = `${file}.tmp`;
-    await fs.writeFile(temporary, JSON.stringify(cached), { mode: 0o600 });
-    await fs.chmod(temporary, 0o600);
-    await fs.rename(temporary, file);
+    await persist(cached);
     return cached;
   })();
   try {

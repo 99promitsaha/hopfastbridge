@@ -28,3 +28,12 @@ const authSchema = new mongoose.Schema({
   expiresAt: { type: Date, required: true, index: { expires: 0 } },
 });
 export const ArchitectAuth = mongoose.model("ArchitectAuth", authSchema);
+
+const xBotTokenSchema = new mongoose.Schema(
+  {
+    key: { type: String, required: true, unique: true },
+    payload: { type: String, required: true },
+  },
+  { timestamps: true },
+);
+export const XBotToken = mongoose.model("XBotToken", xBotTokenSchema);
