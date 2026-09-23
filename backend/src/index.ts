@@ -9,6 +9,12 @@ import routes from './routes/index.js';
 
 const app = express();
 
+// Railway terminates TLS and forwards the original client IP through one proxy.
+// Trusting exactly that hop keeps secure cookies and rate limiting correct in production.
+if (env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 app.use(
   cors({
     origin: env.CORS_ORIGIN,
