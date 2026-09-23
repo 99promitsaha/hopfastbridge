@@ -1,6 +1,6 @@
 # Builder funding
 
-The product now combines bridging to Arc, direct USDC envelopes for architects on X, and community micro-grant requests.
+The product combines bridging to Arc with direct USDC payment envelopes.
 
 ## Implemented locally
 
@@ -8,23 +8,19 @@ The product now combines bridging to Arc, direct USDC envelopes for architects o
 - Quote drawers show route fees, network fees, the included Hopfast fee and the original provider total. The displayed commission is never added again to that total.
 - Envelope composer with recipient handle, six-decimal USDC amount, a 280-character message, and exact 2.5% deducted fee.
 - Five-stage product flow ending with sender reclaim of unclaimed USDC after 30 days.
-- Mongo-backed request board at GET/POST `/api/grants`, validated HTTPS links, public project descriptions and milestones, USDC targets, and a posting rate limit. Community submissions are not identity-verified.
-- Request cards link to project demos and prefill an envelope preview for that builder. No fabricated funded totals or donations are displayed.
 - A dismissible lower-left funding suggestion appears after provider-confirmed completion of a cross-chain bridge to Arc, once per transaction during the session.
 
 ## Still coming soon
 
-Arc escrow deployment and live X configuration are pending. Funding, claim and reclaim code is implemented and gated until configured. Micro-grant contributions remain a preview. No contract was deployed or live X message sent during development. Posting a request saves it to Mongo, not an external grant platform.
+Arc escrow deployment and live X configuration are pending. Funding, claim and reclaim code is implemented and gated until configured. No contract was deployed or live X message sent during development.
 
 ## Fee policy
 
 Envelope fee: **2.5%, deducted and forwarded at deposit**, irrespective of whether claimed. A 25 USDC deposit pays 0.625 USDC to Hopfast and reserves 24.375 USDC. Only that remaining balance can be claimed or reclaimed. No additional Hopfast fee applies at withdrawal. The treasury is immutable in the contract. Fees round up to micro-USDC precision.
 
-Micro-grant contribution fee remains 1.5%, deducted; the builder receives 98.5%. Network gas is separate. Bridge fees are unchanged.
-
 ## Claim and identity
 
-The backend resolves the X handle to a permanent user ID and binds the contract deposit to its hash. Recipient sign-in uses OAuth 2.0 PKCE S256, single-use state, ten-minute expiry and an HttpOnly SameSite browser cookie. `/2/users/me` must match that permanent ID. Renamed or recycled usernames cannot redirect old grants. X access tokens are not persisted.
+The backend resolves the X handle to a permanent user ID and binds the contract deposit to its hash. Recipient sign-in uses OAuth 2.0 PKCE S256, single-use state, ten-minute expiry and an HttpOnly SameSite browser cookie. `/2/users/me` must match that permanent ID. Renamed or recycled usernames cannot redirect old payments. X access tokens are not persisted.
 
 A five-minute, single-use wallet challenge authenticates the intended recipient wallet before OAuth. The backend issues a short-lived EIP-712 claim authorization binding the envelope ID, recipient wallet, chain and escrow contract. Only that wallet can execute it. Contract state prevents repeated payment. The signer is a trusted identity authority; compromising its key could authorize fraudulent claims, so keep it server-side and separate from admin/deployer keys. Admin can pause deposits/claims and rotate it.
 

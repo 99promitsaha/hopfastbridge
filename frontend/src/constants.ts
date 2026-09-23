@@ -13,7 +13,7 @@ export const DEFAULT_DRAFT: SwapDraft = {
 };
 
 export const DEBOUNCE_MS = 1000;
-export const QUOTE_REFRESH_INTERVAL_S = 60;
+export const QUOTE_REFRESH_INTERVAL_S = 20;
 export const HISTORY_LIMIT = 50;
 
 export const API_BASE_URL =

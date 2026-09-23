@@ -9,19 +9,6 @@ test('envelopes deduct a 2.5% fee at deposit', () => {
     total: '25',
   });
 });
-test('micro-grants deduct a 1.5% fee from the contribution', () => {
-  assert.deepEqual(fundingAmounts('25', 150), {
-    amount: '24.625',
-    fee: '0.375',
-    total: '25',
-  });
-  assert.deepEqual(fundingAmounts('500', 150), {
-    amount: '492.5',
-    fee: '7.5',
-    total: '500',
-  });
-  assert.equal(fundingAmounts('0.000001', 150), null);
-});
 test('fees round to USDC precision without floating-point drift', () => {
   assert.equal(fundingAmounts('0.000001', 250), null);
   assert.deepEqual(fundingAmounts('0.000041', 250), {amount:'0.000039',fee:'0.000002',total:'0.000041'});

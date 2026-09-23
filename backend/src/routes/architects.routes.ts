@@ -149,7 +149,7 @@ router.use(
 router.use("/architects", (_req, res, next) => {
   if (!configured() || !isDatabaseReady())
     return res.status(503).json({
-      error: "Support Architects is awaiting escrow and X configuration.",
+      error: "Pay on Arc is awaiting escrow and X configuration.",
     });
   next();
 });
@@ -157,7 +157,7 @@ router.post("/architects/challenge", async (req, res, next) => {
   try {
     const wallet = walletSchema.parse(req.body.wallet).toLowerCase();
     const nonce = random();
-    const message = `Hopfast Support Architects\nOrigin: ${env.APP_BASE_URL}\nChain: ${env.ARCHITECT_CHAIN_ID}\nWallet: ${wallet}\nNonce: ${nonce}\nExpires: ${new Date(Date.now() + 300000).toISOString()}\nAuthenticate only. No funds are transferred.`;
+    const message = `Hopfast Pay on Arc\nOrigin: ${env.APP_BASE_URL}\nChain: ${env.ARCHITECT_CHAIN_ID}\nWallet: ${wallet}\nNonce: ${nonce}\nExpires: ${new Date(Date.now() + 300000).toISOString()}\nAuthenticate only. No funds are transferred.`;
     await ArchitectAuth.create({
       tokenHash: hash(nonce),
       kind: "challenge",

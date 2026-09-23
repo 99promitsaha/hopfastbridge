@@ -14,13 +14,12 @@ import {
   ArrowUpRight,
   ArrowLeftRight,
   BarChart3,
-  Sprout,
+  WalletCards,
   X,
 } from 'lucide-react';
 import { Dialog } from './components/Dialog';
 import { AgentView } from './components/AgentView';
 import { ArchitectDeployment } from './components/ArchitectDeployment';
-import { MicroGrantsView } from './components/MicroGrantsView';
 import { LandingView } from './components/LandingView';
 import { SwapView } from './components/SwapView';
 import { StatsView } from './components/StatsView';
@@ -40,7 +39,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   const [view, setView] = useState<EntryView>(() =>
     new URLSearchParams(window.location.search).get('deploy')==='architects' && ['localhost','127.0.0.1'].includes(window.location.hostname) ? 'deployment' : new URLSearchParams(window.location.search).has('payment')
       ? 'payment'
-      : (new URLSearchParams(window.location.search).has('envelope') || new URLSearchParams(window.location.search).has('claimError')) ? 'agent' : 'human'
+      : 'human'
   );
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletBridge, setWalletBridge] = useState<PrivyWalletBridge | null>(
@@ -50,6 +49,10 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(() =>
+    new URLSearchParams(window.location.search).has('envelope') ||
+    new URLSearchParams(window.location.search).has('claimError')
+  );
   const [envelopeHandle, setEnvelopeHandle] = useState('');
   const [fundingNudge, setFundingNudge] = useState(false);
   const nudgedHash = useRef<string | null>(null);
@@ -215,6 +218,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   const handleBack = useCallback(() => {
     window.history.replaceState(null, '', window.location.pathname);
     setView('human');
+    setSupportOpen(false);
     closeSwap();
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [closeSwap]);
@@ -238,11 +242,12 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
         </button>
         <nav className="hf-nav" aria-label="Main navigation">
           <button
-            className={view === 'human' ? 'active' : ''}
+            className={view === 'human' && !supportOpen ? 'active' : ''}
             aria-label="Bridge (live)"
             aria-current={view === 'human' ? 'page' : undefined}
             onClick={() => {
               setView('human');
+              setSupportOpen(false);
               closeSwap();
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
@@ -252,19 +257,15 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             <span className="hf-bridge-live-dot" aria-hidden="true" />
           </button>
           <button
-            className={view === 'agent' ? 'active' : ''}
-            aria-current={view === 'agent' ? 'page' : undefined}
-            onClick={() => setView('agent')}
+            className={supportOpen ? 'active' : ''}
+            aria-current={supportOpen ? 'page' : undefined}
+            onClick={() => {
+              setView('human');
+              setSupportOpen(true);
+            }}
           >
-            <span>🧭 Support ARCHITECTS</span>
-          </button>
-          <button
-            className={view === 'grants' ? 'active' : ''}
-            aria-current={view === 'grants' ? 'page' : undefined}
-            onClick={() => setView('grants')}
-          >
-            <Sprout size={15} />
-            <span>Request a micro-grant</span>
+            <WalletCards size={15} />
+            <span>Pay on Arc</span>
           </button>
           <button
             className={view === 'stats' ? 'active' : ''}
@@ -296,27 +297,6 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
           />
         )}
 
-        {view === 'agent' && (
-          <AgentView
-            onBack={() => {
-              setView('human');
-              setSwapOpen(true);
-            }}
-            onGrants={() => setView('grants')}
-            initialHandle={envelopeHandle}
-            wallet={walletBridge}
-            onConnect={HAS_PRIVY ? privyAuth.login : undefined}
-          />
-        )}
-        {view === 'grants' && (
-          <MicroGrantsView
-            onBackBuilder={(handle) => {
-              setEnvelopeHandle(handle);
-              setView('agent');
-            }}
-          />
-        )}
-
         {view === 'stats' && <StatsView onBack={() => setView('human')} />}
 
         {view === 'human' && (
@@ -331,8 +311,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
           >
             <LandingView
               onBridge={() => setSwapOpen(true)}
-              onPayAnyone={() => setView('agent')}
-              onGrants={() => setView('grants')}
+              onPayAnyone={() => setSupportOpen(true)}
             />
           </motion.main>
         )}
@@ -373,10 +352,35 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             onConnect={privyAuth.login}
             onAgentClick={() => {
               closeSwap();
-              setView('agent');
+              setView('human');
+              setSupportOpen(true);
             }}
             onToggleHistory={() => setHistoryOpen((prev) => !prev)}
             onTxStatusClear={clearTxStatus}
+          />
+        </Dialog>
+      )}
+
+      {supportOpen && (
+        <Dialog
+          className="hf-support-modal"
+          title="Pay on Arc"
+          onClose={() => {
+            setSupportOpen(false);
+            setView('human');
+            if (new URLSearchParams(window.location.search).has('envelope')) {
+              window.history.replaceState(null, '', window.location.pathname);
+            }
+          }}
+        >
+          <AgentView
+            onBack={() => {
+              setSupportOpen(false);
+              setSwapOpen(true);
+            }}
+            initialHandle={envelopeHandle}
+            wallet={walletBridge}
+            onConnect={HAS_PRIVY ? privyAuth.login : undefined}
           />
         </Dialog>
       )}
@@ -397,7 +401,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             type="button"
             onClick={() => {
               setFundingNudge(false);
-              setView('agent');
+              setSupportOpen(true);
             }}
           >
             Preview a USDC envelope <ArrowUpRight size={14} />
@@ -434,11 +438,6 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
               seed phrase or private key.
             </p>
             <h3>Off-chain records</h3>
-            <p>
-              Micro-grant requests publish your X handle, project link,
-              description, milestone, and USDC target on the request board.
-              Submit only information you want to share.
-            </p>
             <p>
               We store swap records and payment requests to provide history and
               tracking. Payment links contain a private access token. Share a

@@ -48,7 +48,7 @@ export function ArchitectDeposits({
     }
   }
   return (
-    <section className="hf-grant-crosslink hf-architect-deposits">
+    <section className="hf-architect-deposits">
       <div>
         <h2>Your envelopes</h2>
         <p>Review funded envelopes and reclaim unclaimed USDC after 30 days.</p>
@@ -62,7 +62,7 @@ export function ArchitectDeposits({
           let saved: { claimUrl?: string } | null = null;
           try {
             saved = JSON.parse(
-              localStorage.getItem(`hopfast-envelope:${e.envelopeId}`) ||
+              sessionStorage.getItem(`hopfast-envelope:${e.envelopeId}`) ||
                 "null",
             );
           } catch {}

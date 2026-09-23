@@ -1,8 +1,8 @@
 # Integrator fees
 
-## Builder funding previews
+## Pay on Arc
 
-Support Architect envelopes deduct a 2.5% Hopfast fee (250 basis points) from the entered deposit and forward it to the contract’s immutable treasury immediately. A 25 USDC deposit pays 0.625 USDC to Hopfast and reserves 24.375 USDC for claiming or reclaiming. The fee is nonrefundable, irrespective of claim. No second fee applies at claim or reclaim. The escrow implementation is awaiting configuration and deployment. Micro-grant contributions still preview a 1.5% deducted fee: 500 USDC yields 492.5 USDC for the builder, a 7.5 fee, and 500 total. Gas is separate. Six-decimal integer calculations round fees up to the next micro-USDC; amounts entirely consumed by rounding are rejected. Existing bridge fees remain unchanged. See [builder funding](BUILDER-FUNDING.md) for contract and identity details.
+Payment envelopes deduct a 2.5% Hopfast fee (250 basis points) from the entered deposit and forward it to the contract’s immutable treasury immediately. A 25 USDC deposit pays 0.625 USDC to Hopfast and reserves 24.375 USDC for claiming or reclaiming. The fee is nonrefundable, irrespective of claim. No second fee applies at claim or reclaim. Gas is separate. Six-decimal integer calculations round fees up to the next micro-USDC; amounts entirely consumed by rounding are rejected. Existing bridge fees remain unchanged. See [builder funding](BUILDER-FUNDING.md) for contract and identity details.
 
 Reviewed against provider documentation on 2026-09-17. Local `LIFI_FEE` is configured to 0.0005: five basis points, or 0.05%. LI.FI quotes require the portal integrator and receiving wallet; missing configuration produces an explicit error. Squid requests have no added Hopfast commission. External provider accounts have not been modified.
 

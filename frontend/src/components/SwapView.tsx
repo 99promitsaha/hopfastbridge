@@ -356,13 +356,14 @@ export function SwapView({
     triggerFetchImmediate(next);
   };
 
-  /** Truncate a decimal string to at most 5 places for display only.
+  /** Round a decimal string to at most 3 places for display only.
    *  The underlying value in state is never touched. */
-  const truncateDisplay = (value: string, places = 5): string => {
+  const truncateDisplay = (value: string, places = 3): string => {
     if (!value) return value;
-    const dot = value.indexOf('.');
-    if (dot === -1) return value;
-    return value.slice(0, dot + places + 1);
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return value;
+    if (numeric > 0 && numeric < 10 ** -places) return `<${(10 ** -places).toFixed(places)}`;
+    return numeric.toFixed(places).replace(/\.?0+$/, '');
   };
 
   const formatDuration = (seconds: number) =>
@@ -1372,23 +1373,6 @@ export function SwapView({
 
                 {bestQuote && !isQuoting && (
                   <div className="hf-fee-summary hf-fadeup">
-                    <div className="hf-fee-row">
-                      <span className="hf-fee-label">Hopfast fee</span>
-                      <span
-                        className="hf-fee-value"
-                        title="The Hopfast fee is already included in the quote. Network and routing costs still apply."
-                      >
-                        {bestQuote.provider === 'squid-api' ? (
-                          <>
-                            Free <Check size={10} strokeWidth={3} />
-                          </>
-                        ) : bestQuote.hopfastFeeUsd != null ? (
-                          `$${bestQuote.hopfastFeeUsd}`
-                        ) : (
-                          'Unavailable'
-                        )}
-                      </span>
-                    </div>
                     <div className="hf-fee-row">
                       <span className="hf-fee-label">Min. received</span>
                       <span className="hf-fee-value">

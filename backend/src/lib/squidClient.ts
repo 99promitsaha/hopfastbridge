@@ -33,6 +33,31 @@ const CHAIN_ID_BY_KEY: Record<ChainKey, number> = {
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 const NATIVE_EEE = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+const CHAIN_CACHE_MS = 15 * 60_000;
+let supportedChainIds: { ids: Set<string>; expiresAt: number } | null = null;
+
+async function assertSquidSupportsChain(chainId: number, headers: Record<string, string>) {
+  if (supportedChainIds && supportedChainIds.expiresAt > Date.now()) {
+    if (!supportedChainIds.ids.has(String(chainId)))
+      throw new Error(`Squid does not currently list chain ${chainId} as supported.`);
+    return;
+  }
+  try {
+    const response = await fetch(`${env.SQUID_API_BASE_URL}/v2/chains`, {
+      headers,
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!response.ok) return;
+    const data = await response.json() as { chains?: Array<{ chainId?: string | number }> };
+    const ids = new Set((data.chains ?? []).map((chain) => String(chain.chainId)));
+    supportedChainIds = { ids, expiresAt: Date.now() + CHAIN_CACHE_MS };
+    if (!ids.has(String(chainId)))
+      throw new Error(`Squid does not currently list chain ${chainId} as supported.`);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Squid does not currently list')) throw error;
+    // If metadata is temporarily unavailable, let the route endpoint decide.
+  }
+}
 
 function parseChainId(value?: string): number {
   if (!value) throw new Error('Missing chain key for Squid quote.');
@@ -164,6 +189,13 @@ export async function requestSquidQuote(payload: UnifiedQuotePayload): Promise<{
 
   if (env.SQUID_INTEGRATOR_ID) {
     headers['x-integrator-id'] = env.SQUID_INTEGRATOR_ID;
+  }
+
+  // Squid returns a misleading “low liquidity” response for unknown chains.
+  // Check its live registry first, cache it briefly, and automatically enable
+  // Arc as soon as Squid publishes chain 5042.
+  if (srcChainId === 5042 || dstChainId === 5042) {
+    await assertSquidSupportsChain(5042, headers);
   }
 
   const response = await fetch(`${env.SQUID_API_BASE_URL}/v2/route`, {

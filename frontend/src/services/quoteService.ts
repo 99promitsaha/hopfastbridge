@@ -105,6 +105,7 @@ async function fetchQuoteFromBackend(
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(22_000),
   });
 
   if (!response.ok) {

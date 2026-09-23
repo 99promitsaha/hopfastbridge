@@ -27,12 +27,23 @@ const quoteLimiter = rateLimit({
 });
 
 type Payload = Parameters<typeof requestLiFiQuote>[0];
+const inFlightQuotes = new Map<string, Promise<QuoteResponse>>();
 export async function requestProvider(
   provider: Provider,
   payload: Payload
 ): Promise<QuoteResponse> {
-  if (provider === 'squid') return requestSquidQuote(payload);
-  return requestLiFiQuote(payload);
+  const key = `${provider}:${JSON.stringify(payload)}`;
+  const existing = inFlightQuotes.get(key);
+  if (existing) return existing;
+  const request = provider === 'squid'
+    ? requestSquidQuote(payload)
+    : requestLiFiQuote(payload);
+  inFlightQuotes.set(key, request);
+  try {
+    return await request;
+  } finally {
+    inFlightQuotes.delete(key);
+  }
 }
 const chain = z.enum(['ethereum', 'base', 'bsc', 'polygon', 'monad', 'arc']);
 const comparisonSchema = z.object({

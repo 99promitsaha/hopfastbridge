@@ -89,8 +89,8 @@ export function StatsView({ onBack }: Props) {
       <div className="hf-stats-header">
         <div className="hf-stats-header-left">
           <p className="hf-kicker">RECORDED ACTIVITY</p>
-          <h2 className="hf-stats-title">Bridge stats.</h2>
-          <p className="hf-stats-range">{PERIOD_LABELS[period]}</p>
+          <h2 className="hf-stats-title">What moved through Hopfast.</h2>
+          <p className="hf-stats-range">{PERIOD_LABELS[period]} · activity recorded by this app</p>
         </div>
         <div className="hf-stats-periods">
           {(['7d', '15d', '30d'] as Period[]).map((p) => (
@@ -112,20 +112,20 @@ export function StatsView({ onBack }: Props) {
         <>
           <div className="hf-stats-grid">
             <div className="hf-stat-card">
-              <p className="hf-stat-card-label">Unique Users</p>
+              <p className="hf-stat-card-label">Wallets served</p>
               <p className="hf-stat-card-value">
                 {data.uniqueUsers.toLocaleString()}
               </p>
             </div>
             <div className="hf-stat-card">
-              <p className="hf-stat-card-label">Swap Volume</p>
+              <p className="hf-stat-card-label">Value routed</p>
               <p className="hf-stat-card-value">
                 {formatUsd(data.swapVolumeUsd)}
               </p>
-              <p className="hf-stat-card-sub">Across supported networks</p>
+              <p className="hf-stat-card-sub">Submitted across supported networks</p>
             </div>
             <div className="hf-stat-card hf-stat-card-free">
-              <p className="hf-stat-card-label">Recorded swaps</p>
+              <p className="hf-stat-card-label">Routes submitted</p>
               <p className="hf-stat-card-value">
                 {data.swapCount.toLocaleString()}
               </p>

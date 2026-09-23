@@ -1,7 +1,7 @@
 {
-  "name": "Hopfast | Swap Aggregator and Micro-grant platform, on Arc",
+  "name": "Hopfast | Bridge and pay on Arc",
   "short_name": "Hopfast",
-  "description": "A Swap Aggregator and Micro-grant platform, on Arc. USDC envelopes and builder funding are coming soon.",
+  "description": "Compare bridge routes and pay anyone on Arc with USDC.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",

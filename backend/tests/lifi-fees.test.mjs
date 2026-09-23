@@ -172,10 +172,13 @@ test('Arc quotes retain six-decimal USDC amounts and use mainnet 5042', async ()
     global.fetch = original;
   }
 });
-test('Squid Arc routes are forwarded to the provider', async () => {
+test('Squid Arc routes are forwarded when the live Squid registry lists Arc', async () => {
   const { requestSquidQuote } = await import('../dist/lib/squidClient.js');
   const original = global.fetch;
-  global.fetch = async (_url, options) => {
+  global.fetch = async (url, options) => {
+    if (String(url).endsWith('/v2/chains')) {
+      return new Response(JSON.stringify({ chains: [{ chainId: '5042' }] }));
+    }
     const body = JSON.parse(options.body);
     assert.equal(body.fromChain, '8453');
     assert.equal(body.toChain, '5042');

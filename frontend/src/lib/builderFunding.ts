@@ -1,6 +1,6 @@
 import { parseUnits, formatUnits } from './amount';
 
-export function fundingAmounts(amount: string, basisPoints: 250 | 150) {
+export function fundingAmounts(amount: string, basisPoints: 250) {
   try {
     if (!/^\d+(\.\d{1,6})?$/.test(amount)) return null;
     const units = parseUnits(amount, 6);
