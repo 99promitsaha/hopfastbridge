@@ -25,6 +25,9 @@ export function PaymentIdentity({
   const [error, setError] = useState('');
   const [copied, setCopied] = useState<'vpa' | 'link' | 'wallet' | null>(null);
   const qrRef = useRef<HTMLDivElement>(null);
+  const paymentUrl = profile
+    ? `${import.meta.env.DEV ? window.location.origin : 'https://www.hopfast.xyz'}/?pay=${encodeURIComponent(profile.handle)}`
+    : '';
 
   useEffect(() => {
     setProfile(null);
@@ -83,10 +86,10 @@ export function PaymentIdentity({
 
   async function shareProfile() {
     if (!profile) return;
-    const text = `Pay @${profile.handle} in USDC on Arc with Hopfast: ${profile.payUrl}`;
+    const text = `Pay @${profile.handle} in USDC on Arc with Hopfast: ${paymentUrl}`;
     try {
       if (navigator.share) {
-        await navigator.share({ title: `Pay @${profile.handle} on Arc`, text, url: profile.payUrl });
+        await navigator.share({ title: `Pay @${profile.handle} on Arc`, text, url: paymentUrl });
       } else {
         await navigator.clipboard.writeText(text);
         setCopied('link');
@@ -178,12 +181,12 @@ export function PaymentIdentity({
       </div>
       <div className="hf-identity-qr-card">
         <div className="hf-identity-qr" ref={qrRef}>
-          <QRCodeSVG value={profile.payUrl} size={190} bgColor="transparent" fgColor="#17375f" level="M" />
+          <QRCodeSVG value={paymentUrl} size={190} bgColor="transparent" fgColor="#17375f" level="M" />
           <img src="/brand/hopfast-mark.svg" alt="" />
         </div>
         <strong>Scan to pay @{profile.handle}</strong>
         <span>USDC on Arc · X verified</span>
-        <small>{profile.payUrl.replace(/^https?:\/\//, '')}</small>
+        <small>{paymentUrl.replace(/^https?:\/\//, '')}</small>
         <button className="hf-identity-download" type="button" onClick={downloadQr}>
           <Download size={13} /> Download QR
         </button>
