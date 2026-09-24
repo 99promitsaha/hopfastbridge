@@ -10,9 +10,9 @@ The product combines bridging to Arc with direct USDC payment envelopes.
 - Five-stage product flow ending with sender reclaim of unclaimed USDC after 30 days.
 - A dismissible lower-left funding suggestion appears after provider-confirmed completion of a cross-chain bridge to Arc, once per transaction during the session.
 
-## Still coming soon
+## Live configuration
 
-Arc escrow deployment and live X configuration are pending. Funding, claim and reclaim code is implemented and gated until configured. No contract was deployed or live X message sent during development.
+The escrow is deployed on Arc mainnet. The backend gates payment creation until the configured contract, authorization signer, treasury, admin, chain and database all match the live deployment.
 
 ## Fee policy
 
@@ -34,11 +34,9 @@ The admin cannot directly drain active escrow. Once expired, the owner can queue
 
 The owner is also trusted because it can replace the claim-authorization signer. A malicious owner could use that power to authorize claims of active envelopes. The expiry and delay constrain the recovery function, not the owner’s identity-authority power. This is not a trustless escrow.
 
-## Agent delivery
+## Sharing the payment
 
-Sharing a funded private link works without agent delivery. Bot delivery requires an OAuth user-context token with `dm.write`, and `X_DELIVERY_ENABLED=true`; the sample default is false. The funded sender explicitly requests delivery with a fresh wallet proof. Backend verifies the deposit’s funder, identity, amount and active state before sending. Atomic locking prevents duplicate sends. Ambiguous timeouts are not automatically retried. Failed DMs offer link sharing. A definite 401 triggers one refresh-token exchange and retry; rotated tokens are saved atomically in a private, git-ignored server file. Keep that file on persistent storage. Refresh revocation or expiry requires account reauthorization.
-
-Local X app “Hopfast Support Architects” (33445194) is configured with OAuth 2.0 and numeric-loopback callback `http://127.0.0.1:8080/api/architects/x/callback`. Bearer lookup and the delivery token’s `/2/users/me` account were verified. Delivery is explicitly approved from `@99promitsaha`, with `dm.write`, public read scopes and refresh access; `dm.read` was cleared. No actual DMs have been sent. Use a dedicated bot account later if messages should come from Hopfast’s own handle.
+After funding, Hopfast creates a private claim link, QR code and prewritten message. The sender shares it from their own account or messaging app. Hopfast does not send DMs, store a bot token or impersonate the sender. X OAuth is used only to verify that the account opening the claim matches the permanent recipient ID recorded when the payment was created.
 
 ## Setup
 
@@ -46,7 +44,7 @@ Local X app “Hopfast Support Architects” (33445194) is configured with OAuth
 2. Choose admin, fee treasury and separate claim-signer addresses. Keep all private keys out of frontend settings and git.
 3. Run `npm ci` and `npm test` in `contracts`. Review `src/ArchitectEscrow.sol`. Deployment script requires `ARC_RPC_URL`, `DEPLOYER_PRIVATE_KEY`, `ARCHITECT_ADMIN_ADDRESS`, `ARCHITECT_TREASURY_ADDRESS`, `ARCHITECT_SIGNER_ADDRESS` and explicit `CONFIRM_DEPLOY=arc-5042002` (or `arc-5042`). Then run `npm run deploy`. The deployer pays gas; configured admin owns the contract.
 4. Add the deployed `ARCHITECT_ESCROW_ADDRESS`, matching `ARCHITECT_SIGNER_KEY`, chain ID and RPC to backend settings.
-5. In X Developer Console, enable OAuth 2.0 for a Web App, register the exact callback, and obtain Client ID, Client Secret and app bearer token. Set `X_CLIENT_ID`, `X_CLIENT_SECRET`, `X_BEARER_TOKEN`, `X_CALLBACK_URL`. Recipient scopes are `tweet.read users.read`. Optional bot scopes include `dm.write` and `offline.access`; provision `X_BOT_ACCESS_TOKEN` and `X_BOT_REFRESH_TOKEN`. X API access and recipient DM restrictions still apply.
+5. In X Developer Console, enable OAuth 2.0 for a Web App, register the exact callback, and obtain Client ID, Client Secret and app bearer token. Set `X_CLIENT_ID`, `X_CLIENT_SECRET`, `X_BEARER_TOKEN`, `X_CALLBACK_URL`. Recipient scopes are `tweet.read users.read`; DM permissions are not needed.
 6. Use matching hostnames for frontend links and browsing, and for API/callback. Production requires HTTPS and a same-site API for the browser cookie. Set APP_BASE_URL, CORS_ORIGIN and VITE_HOPFAST_API_BASE_URL accordingly.
 7. Restart backend and check `/api/architects/config`, then perform a separately approved testnet deposit and claim. Configuration and live OAuth remain unverified until credentials and deployment are supplied.
 
@@ -58,4 +56,4 @@ After confirmation, the server verifies chain, exact creation bytecode/construct
 
 Admin tooling: from `contracts`, `node scripts/admin.mjs queue <id> <recipient> <reason>`, `cancel <id>`, or `execute <id>`, with local admin credentials. A multisig may call the functions directly instead.
 
-References: [Arc USDC](https://docs.arc.io/arc/references/contract-addresses), [Arc networks](https://docs.arc.io/arc/references/connect-to-arc), [X OAuth PKCE](https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code), [X DMs](https://docs.x.com/x-api/direct-messages/create-dm-message-by-participant-id).
+References: [Arc USDC](https://docs.arc.io/arc/references/contract-addresses), [Arc networks](https://docs.arc.io/arc/references/connect-to-arc), [X OAuth PKCE](https://docs.x.com/fundamentals/authentication/oauth-2-0/authorization-code).

@@ -1,6 +1,6 @@
 # Hopfastbridge
 
 A swap aggregator and payments app for Arc. Compare LI.FI and Squid routes, then pay anyone on Arc with USDC.
-Support ARCHITECTS: Arc USDC escrow envelopes with permanent X account verification, wallet-bound claims and funder reclaim after 30 days. Activation requires escrow deployment and X configuration. Optional agent DM delivery defaults off; private claim links can be shared directly.
-Payment envelopes deduct and forward a nonrefundable 2.5% Hopfast fee at deposit; the remaining 97.5% is claimable or reclaimable. Admin recovery applies only to expired envelopes, after a seven-day public delay.
+Pay by X username: Hopfast creates a private Arc USDC claim link and ready-to-send message. The sender shares it from their own account; Hopfast uses X only to verify that the intended recipient is claiming.
+Hopfast ID: verify an X account and Arc wallet to receive a shareable payment address, QR code, and direct payment link. Unclaimed private payments remain recoverable after their claim window.
 Users review every route and sign in their own wallets. Transaction hashes must be verified before reporting completion.

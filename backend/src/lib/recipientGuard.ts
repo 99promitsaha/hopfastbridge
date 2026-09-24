@@ -76,17 +76,25 @@ export function assertValidSender(
  * The backend-side check specifically matters for non-browser clients (our
  * direct API consumers) which never run the frontend scan.
  *
- * No-ops on empty / selector-only calldata (length <= 10 hex chars, i.e. just
- * a 4-byte function selector or nothing) — there are no parameters to check.
+ * Executable bridge quotes must include parameterized calldata. Empty or
+ * selector-only data cannot prove the destination and is rejected.
  */
 export function assertCalldataRoutesToRecipient(
   data: string | undefined,
   recipient: string,
   providerLabel: string
 ): void {
-  if (!data) return;
+  if (!data || !/^0x(?:[0-9a-fA-F]{2})*$/.test(data)) {
+    throw new InvalidRecipientError(
+      `${providerLabel} response is missing valid transaction calldata`
+    );
+  }
   const normalized = data.toLowerCase();
-  if (normalized.length <= 10) return; // only a function selector or empty
+  if (normalized.length <= 10) {
+    throw new InvalidRecipientError(
+      `${providerLabel} response calldata does not contain route parameters`
+    );
+  }
   const needle = recipient.toLowerCase().replace(/^0x/, '');
   if (!needle || needle.length !== 40) return; // malformed recipient, caller already asserted it
   if (!normalized.includes(needle)) {

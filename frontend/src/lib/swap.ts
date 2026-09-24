@@ -58,8 +58,19 @@ export function validateTransactionRequest(tx: {
   if (!tx.to || !ETH_ADDRESS_RE.test(tx.to)) {
     return 'Invalid transaction target address.';
   }
-  if (!tx.data || tx.data.length < 10) {
+  if (/^0x0{40}$/i.test(tx.to)) {
+    return 'Transaction target cannot be the zero address.';
+  }
+  if (!tx.data || !/^0x(?:[0-9a-fA-F]{2})+$/.test(tx.data) || tx.data.length <= 10) {
     return 'Transaction data is missing or malformed.';
+  }
+  if (tx.value != null) {
+    try {
+      const value = BigInt(tx.value);
+      if (value < 0n || value >= 2n ** 256n) return 'Transaction value is out of range.';
+    } catch {
+      return 'Transaction value is malformed.';
+    }
   }
   return null; // valid
 }

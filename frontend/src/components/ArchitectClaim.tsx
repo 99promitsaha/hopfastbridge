@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Clock3, ExternalLink, ShieldCheck } from 'lucide-react';
 import { formatUnits } from 'viem';
+import { formatDisplayAmount } from '../lib/amount';
 import {
   architectApi,
   escrowWrite,
@@ -57,11 +58,11 @@ export function ArchitectClaim({
   if (!id) return null;
   const expired = Boolean(envelope) && now >= envelope!.expiresAt;
   const claimAmount = envelope
-    ? formatUnits(
+    ? formatDisplayAmount(formatUnits(
         BigInt(envelope.gross) -
           (BigInt(envelope.gross) * BigInt(config.feeBps) + 9999n) / 10000n,
         6
-      )
+      ))
     : null;
 
   async function action(kind: 'verify' | 'claim' | 'reclaim') {

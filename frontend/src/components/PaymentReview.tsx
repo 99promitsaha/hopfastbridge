@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, ExternalLink, Loader2, Shield, X } from 'lucide-react';
 import { API_BASE_URL } from '../constants';
+import { formatDisplayAmount } from '../lib/amount';
 import type { PrivyWalletBridge } from './WalletConnector';
 
 interface Payment {
@@ -176,7 +177,7 @@ export function PaymentReview({
         })) as string
       );
       const fee = gas * maxFee;
-      setEstimatedFee((Number(fee) / 1e18).toFixed(6));
+      setEstimatedFee(formatDisplayAmount(Number(fee) / 1e18));
       if (balance < BigInt(fresh.value) + fee)
         throw new Error(
           'Insufficient USDC for both this payment and the gas reserve.'
@@ -233,11 +234,11 @@ export function PaymentReview({
           <X size={18} />
         </button>
         <p className="hf-kicker">
-          <Shield size={14} /> Private Arc payment
+          <Shield size={14} /> Arc payment review
         </p>
         <h1>Confirm this Arc payment</h1>
         <p className="hf-payment-sub">
-          Check the amount, recipient, and note before you open your wallet.
+          Confirm the amount and destination before approving in your wallet.
         </p>
         {!payment && !error && (
           <p>
@@ -247,7 +248,7 @@ export function PaymentReview({
         {payment && (
           <>
             <div className="hf-payment-amount">
-              {payment.amount} <span>USDC</span>
+              {formatDisplayAmount(payment.amount)} <span>USDC</span>
             </div>
             <dl className="hf-payment-details">
               <dt>Network</dt>

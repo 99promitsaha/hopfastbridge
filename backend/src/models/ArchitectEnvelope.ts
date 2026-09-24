@@ -10,8 +10,6 @@ const schema = new mongoose.Schema(
     message: { type: String, required: true },
     accessHash: { type: String, required: true },
     fundedTx: String,
-    deliveryState: { type: String, default: "not_sent" },
-    deliveryEventId: String,
   },
   { timestamps: true },
 );
@@ -29,11 +27,12 @@ const authSchema = new mongoose.Schema({
 });
 export const ArchitectAuth = mongoose.model("ArchitectAuth", authSchema);
 
-const xBotTokenSchema = new mongoose.Schema(
+const paymentProfileSchema = new mongoose.Schema(
   {
-    key: { type: String, required: true, unique: true },
-    payload: { type: String, required: true },
+    xId: { type: String, required: true, unique: true, index: true },
+    handle: { type: String, required: true, unique: true, lowercase: true, index: true },
+    wallet: { type: String, required: true, unique: true, lowercase: true, index: true },
   },
   { timestamps: true },
 );
-export const XBotToken = mongoose.model("XBotToken", xBotTokenSchema);
+export const PaymentProfile = mongoose.model("PaymentProfile", paymentProfileSchema);

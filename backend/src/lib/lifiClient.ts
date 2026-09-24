@@ -200,6 +200,7 @@ export async function requestLiFiQuote(payload: UnifiedQuotePayload): Promise<{
       `LI.FI rewrote sender (requested ${fromAddress}, returned ${raw.transactionRequest.from}). Refusing quote.`
     );
   }
+  assertValidRecipient(raw.transactionRequest?.to, 'LI.FI transaction target');
   assertCalldataRoutesToRecipient(raw.transactionRequest?.data, toAddress, 'LI.FI');
 
   const hopfastFeeUsd = quotedHopfastFeeUsd(raw, commissionRate);

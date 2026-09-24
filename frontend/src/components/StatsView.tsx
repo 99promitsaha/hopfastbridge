@@ -89,8 +89,8 @@ export function StatsView({ onBack }: Props) {
       <div className="hf-stats-header">
         <div className="hf-stats-header-left">
           <p className="hf-kicker">HOPFAST ON ARC</p>
-          <h2 className="hf-stats-title">Money moving through Hopfast.</h2>
-          <p className="hf-stats-range">{PERIOD_LABELS[period]} · recorded through Hopfast</p>
+          <h2 className="hf-stats-title">Hopfast bridge activity.</h2>
+          <p className="hf-stats-range">{PERIOD_LABELS[period]} · routes initiated through Hopfast</p>
         </div>
         <div className="hf-stats-periods">
           {(['7d', '15d', '30d'] as Period[]).map((p) => (
@@ -112,7 +112,7 @@ export function StatsView({ onBack }: Props) {
         <>
           <div className="hf-stats-grid">
             <div className="hf-stat-card">
-              <p className="hf-stat-card-label">Connected wallets</p>
+              <p className="hf-stat-card-label">Active wallets</p>
               <p className="hf-stat-card-value">
                 {data.uniqueUsers.toLocaleString()}
               </p>
@@ -130,13 +130,13 @@ export function StatsView({ onBack }: Props) {
                 {data.swapCount.toLocaleString()}
               </p>
               <p className="hf-stat-card-free-badge">
-                Recorded through Hopfast
+                Initiated through Hopfast
               </p>
             </div>
           </div>
 
           <p className="hf-stats-note">
-            This dashboard reports activity recorded by Hopfast. It is an operational view, not independently verified onchain analytics.
+            These figures cover bridge activity initiated through Hopfast. They do not represent all activity on Arc.
           </p>
         </>
       )}

@@ -11,6 +11,7 @@ process.env.APP_BASE_URL = 'http://localhost:5173';
 const store = await import('../dist/lib/paymentStore.js');
 const { parseUsdc, formatUsdc } = await import('../dist/lib/arc.js');
 const { compareRoutes } = await import('../dist/lib/routeComparison.js');
+const { assertCalldataRoutesToRecipient } = await import('../dist/lib/recipientGuard.js');
 const payer = '0x' + '1'.repeat(40), recipient = '0x' + '2'.repeat(40);
 const txHash = '0x' + 'a'.repeat(64);
 const input = { walletAddress: payer, recipient, amount: '1.000000000000000001' };
@@ -48,6 +49,13 @@ test('comparison excludes routes violating fee, duration or guaranteed-output co
 test('comparison rejects missing fee estimates and empty transaction steps', async () => {
   const result = await compareRoutes(async p => ({ provider: p, quotes: [{ ...quote('100'), feeUsd: 'unknown', userSteps: [] }] }), ['lifi'], {});
   assert.equal(result.best, null);
+});
+test('bridge recipient guard fails closed on empty, malformed and misdirected calldata', () => {
+  const recipientWord = recipient.slice(2).toLowerCase().padStart(64, '0');
+  assert.doesNotThrow(() => assertCalldataRoutesToRecipient(`0x12345678${recipientWord}`, recipient, 'fixture'));
+  for (const data of [undefined, '0x', '0x12345678', '0xzz', `0x12345678${'3'.repeat(64)}`]) {
+    assert.throws(() => assertCalldataRoutesToRecipient(data, recipient, 'fixture'));
+  }
 });
 test('review link uses a fragment token, hides token hashes, and rejects other tokens', () => {
   const result = create();

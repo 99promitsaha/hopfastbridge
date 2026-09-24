@@ -11,7 +11,6 @@ import artifact from "../contracts/ArchitectEscrow.json";
 import type { PrivyWalletBridge } from "../components/WalletConnector";
 export type ArchitectConfig = {
   ready: boolean;
-  deliveryEnabled?: boolean;
   contract?: Address;
   chainId: number;
   rpcUrl: string;

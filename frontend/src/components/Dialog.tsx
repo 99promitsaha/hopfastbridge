@@ -4,17 +4,20 @@ import { X } from 'lucide-react';
 
 export function Dialog({
   title,
+  ariaLabel,
   onClose,
   className = '',
   children,
   headerExtra,
 }: {
-  title: string;
+  title: ReactNode;
+  ariaLabel?: string;
   onClose: () => void;
   className?: string;
   children: ReactNode;
   headerExtra?: ReactNode;
 }) {
+  const dialogLabel = ariaLabel ?? (typeof title === 'string' ? title : 'Dialog');
   const ref = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
@@ -75,7 +78,7 @@ export function Dialog({
         ref={ref}
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-label={dialogLabel}
         tabIndex={-1}
       >
         <div className="hf-dropdown-header">
@@ -84,7 +87,7 @@ export function Dialog({
             {headerExtra}
             <button
               className="hf-dropdown-close"
-              aria-label={`Close ${title.toLowerCase()}`}
+              aria-label={`Close ${dialogLabel.toLowerCase()}`}
               onClick={onClose}
             >
               <X size={19} />

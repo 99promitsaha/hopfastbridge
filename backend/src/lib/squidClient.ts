@@ -232,6 +232,7 @@ export async function requestSquidQuote(payload: UnifiedQuotePayload): Promise<{
     Number.isFinite(srcUsd) && srcUsd > 0 ? (feeUsd / srcUsd) * 100 : 0;
 
   const tx = raw.route?.transactionRequest;
+  assertValidRecipient(tx?.target, 'Squid transaction target');
   const txData = tx?.target
     ? {
         to: tx.target,

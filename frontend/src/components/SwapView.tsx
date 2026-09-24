@@ -14,7 +14,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { TokenSelector } from './TokenSelector';
-import { formatUnits, formatUsd, parseUnits } from '../lib/amount';
+import { formatDisplayAmount, formatUnits, formatUsd, parseUnits } from '../lib/amount';
 import {
   CHAINS,
   CHAIN_BY_KEY,
@@ -354,13 +354,8 @@ export function SwapView({
 
   /** Round a decimal string to at most 3 places for display only.
    *  The underlying value in state is never touched. */
-  const truncateDisplay = (value: string, places = 3): string => {
-    if (!value) return value;
-    const numeric = Number(value);
-    if (!Number.isFinite(numeric)) return value;
-    if (numeric > 0 && numeric < 10 ** -places) return `<${(10 ** -places).toFixed(places)}`;
-    return numeric.toFixed(places).replace(/\.?0+$/, '');
-  };
+  const truncateDisplay = (value: string, places = 3) =>
+    value ? formatDisplayAmount(value, places) : value;
 
   const formatDuration = (seconds: number) =>
     seconds < 60 ? `${Math.round(seconds)}s` : `${Math.ceil(seconds / 60)} min`;
@@ -1204,7 +1199,7 @@ export function SwapView({
                                           ? 'Free'
                                           : pQuote.hopfastFeeUsd == null
                                             ? 'Unavailable'
-                                            : `$${pQuote.hopfastFeeUsd}`}
+                                            : formatUsd(Number(pQuote.hopfastFeeUsd))}
                                       </span>
                                     </div>
                                     {pQuote.destinationAmountMin && (

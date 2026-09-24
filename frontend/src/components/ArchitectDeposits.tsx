@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { Copy, RefreshCw, RotateCcw } from "lucide-react";
+import { Copy, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { formatUnits } from "viem";
+import { formatDisplayAmount } from "../lib/amount";
 import {
   architectApi,
   escrowWrite,
@@ -20,6 +21,7 @@ export function ArchitectDeposits({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [contact, setContact] = useState("");
   async function load() {
     if (!wallet) return;
     setBusy(true);
@@ -56,7 +58,7 @@ export function ArchitectDeposits({
         <div>
           <span>PAID FROM THIS WALLET</span>
           <h2>Sent payments</h2>
-          <p>See what is waiting, copy a claim link again, or manage a payment after its claim window ends.</p>
+          <p>Track private payments from this wallet and reopen claim links saved on this device.</p>
         </div>
         <button className="hf-deposits-load" disabled={!wallet || busy} onClick={load}>
           <RefreshCw size={14} className={busy ? "hf-spin" : ""} />
@@ -64,13 +66,25 @@ export function ArchitectDeposits({
         </button>
       </header>
       {error && <p role="alert">{error}</p>}
-      {loaded && items.length === 0 && <div className="hf-deposits-empty"><WalletEmptyIcon /><h3>No Arc payments yet.</h3><p>Payments sent from this wallet will appear here.</p></div>}
+      {loaded && items.length > 0 && (
+        <label className="hf-contact-search">
+          <Search size={14} />
+          <input
+            value={contact}
+            onChange={(event) => setContact(event.target.value)}
+            placeholder="Find a contact"
+            aria-label="Filter payment activity by X username"
+          />
+        </label>
+      )}
+      {loaded && items.length === 0 && <div className="hf-deposits-empty"><WalletEmptyIcon /><h3>No payments yet.</h3><p>Payments sent from this wallet will appear here.</p></div>}
       <div className="hf-deposits-list">
-        {items.map((e) => {
+        {items.filter((e) => e.handle.toLowerCase().includes(contact.replace(/^@/, '').trim().toLowerCase())).map((e) => {
           let saved: { claimUrl?: string } | null = null;
           try {
             saved = JSON.parse(
-              sessionStorage.getItem(`hopfast-envelope:${e.envelopeId}`) ||
+              localStorage.getItem(`hopfast-envelope:${e.envelopeId}`) ||
+                sessionStorage.getItem(`hopfast-envelope:${e.envelopeId}`) ||
                 "null",
             );
           } catch {}
@@ -79,7 +93,7 @@ export function ArchitectDeposits({
           return (
             <article key={e.envelopeId} className="hf-deposit-card">
               <div className="hf-deposit-main"><span className={`hf-deposit-status state-${e.state}`} /> <div><small>PAYMENT TO</small><h3>@{e.handle}</h3></div></div>
-              <strong>{formatUnits(net, 6)} <small>USDC</small></strong>
+              <strong>{formatDisplayAmount(formatUnits(net, 6))} <small>USDC</small></strong>
               <p className="hf-deposit-state">
                 {e.state === 0
                   ? "Draft · awaiting deposit"
@@ -104,7 +118,7 @@ export function ArchitectDeposits({
               )}
               {e.state === 1 && Date.now() >= e.expiresAt && (
                 <button disabled={busy} onClick={() => reclaim(e.envelopeId)}>
-                  <RotateCcw size={13} /> Reclaim {formatUnits(net, 6)} USDC
+                  <RotateCcw size={13} /> Reclaim {formatDisplayAmount(formatUnits(net, 6))} USDC
                 </button>
               )}
               </div>
@@ -112,6 +126,9 @@ export function ArchitectDeposits({
           );
         })}
       </div>
+      {loaded && items.length > 0 && items.filter((e) => e.handle.toLowerCase().includes(contact.replace(/^@/, '').trim().toLowerCase())).length === 0 && (
+        <div className="hf-deposits-empty hf-deposits-empty--filter"><Search size={20} /><h3>No matching payments.</h3><p>Try another X username.</p></div>
+      )}
     </section>
   );
 }

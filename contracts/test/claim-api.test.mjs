@@ -54,22 +54,25 @@ test("API rejects stolen links, wallet replay, wrong X identity and reused OAuth
     X_CLIENT_ID: "fixture",
     X_CALLBACK_URL: "http://localhost:8080/api/architects/x/callback",
     APP_BASE_URL: "http://localhost:5173",
-    X_DELIVERY_ENABLED: "false",
   });
-  const { ArchitectAuth, ArchitectEnvelope } = await import(
+  const { ArchitectAuth, ArchitectEnvelope, PaymentProfile } = await import(
     "../../backend/dist/models/ArchitectEnvelope.js"
   );
-  const records = { auth: [], envelope: [] };
+  const records = { auth: [], envelope: [], profile: [] };
   let sequence = 0;
-  const matches = (record, query) =>
-    Object.entries(query).every(([key, value]) =>
-      value && typeof value === "object" && "$gt" in value
-        ? record[key] > value.$gt
-        : record[key] === value,
-    );
+  const matches = (record, query) => Object.entries(query).every(([key, value]) => {
+    if (key === "$or") return value.some((branch) => matches(record, branch));
+    if (value && typeof value === "object") {
+      if ("$gt" in value) return record[key] > value.$gt;
+      if ("$in" in value) return value.$in.includes(record[key]);
+      if ("$ne" in value) return record[key] !== value.$ne;
+    }
+    return record[key] === value;
+  });
   for (const [model, key] of [
     [ArchitectAuth, "auth"],
     [ArchitectEnvelope, "envelope"],
+    [PaymentProfile, "profile"],
   ]) {
     model.create = async (data) => {
       const record = { _id: String(++sequence), ...data };
@@ -83,6 +86,18 @@ test("API rejects stolen links, wallet replay, wrong X identity and reused OAuth
       return i < 0 ? null : records[key].splice(i, 1)[0];
     };
   }
+  PaymentProfile.deleteMany = async (query) => {
+    records.profile = records.profile.filter((record) => !matches(record, query));
+  };
+  PaymentProfile.findOneAndUpdate = async (query, update) => {
+    let record = records.profile.find((candidate) => matches(candidate, query));
+    if (!record) {
+      record = { _id: String(++sequence), ...query };
+      records.profile.push(record);
+    }
+    Object.assign(record, update.$set);
+    return record;
+  };
   // Isolate persistence in memory; never touch the user's Mongo database.
   Object.defineProperty(mongoose.connection, "readyState", {
     get: () => 1,
@@ -275,13 +290,36 @@ test("API rejects stolen links, wallet replay, wrong X identity and reused OAuth
     assert.equal(
       (await post(`/envelopes/${draft.envelopeId}/authorization`, {}, session))
         .status,
-      409,
+      401,
     );
     const replay = await actualFetch(
       `${base}/x/callback?state=${valid.state}&code=fixture`,
       { headers: { Cookie: valid.cookie }, redirect: "manual" },
     );
     assert.match(replay.headers.get("location"), /claimError/);
+
+    // A wallet-bound X profile uses the same one-time OAuth protections and
+    // creates a public payment identity only after X verifies the account.
+    signedInId = "profile-123";
+    const profileStart = await post("/profile/x", await proof(recipient));
+    assert.equal(profileStart.status, 200);
+    const profileAuthorizeTarget = new URL((await profileStart.json()).url);
+    const profileAuthorize = await actualFetch(
+      `${base}${profileAuthorizeTarget.pathname.replace("/api/architects", "")}${profileAuthorizeTarget.search}`,
+      { redirect: "manual" },
+    );
+    const profileXUrl = new URL(profileAuthorize.headers.get("location"));
+    const profileCookie = profileAuthorize.headers.get("set-cookie").split(";")[0];
+    const profileCallback = await actualFetch(
+      `${base}/x/callback?state=${profileXUrl.searchParams.get("state")}&code=fixture`,
+      { headers: { Cookie: profileCookie }, redirect: "manual" },
+    );
+    assert.match(profileCallback.headers.get("location"), /payProfile=1/);
+    const publicProfile = await actualFetch(`${base}/profiles/renamed_builder`);
+    assert.equal(publicProfile.status, 200);
+    const publicBody = await publicProfile.json();
+    assert.equal(publicBody.profile.wallet.toLowerCase(), recipient.address.toLowerCase());
+    assert.equal(publicBody.profile.vpa, "renamed_builder@hopfast");
     // Test local deployment review and strict receipt validation without touching real settings.
     const { env } = await import("../../backend/dist/config/env.js");
     const { default: deploymentRouter } = await import(

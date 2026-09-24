@@ -51,9 +51,13 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   const [swapOpen, setSwapOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(() =>
     new URLSearchParams(window.location.search).has('envelope') ||
-    new URLSearchParams(window.location.search).has('claimError')
+    new URLSearchParams(window.location.search).has('claimError') ||
+    new URLSearchParams(window.location.search).has('pay') ||
+    new URLSearchParams(window.location.search).has('payProfile')
   );
-  const [envelopeHandle, setEnvelopeHandle] = useState('');
+  const [envelopeHandle] = useState(() =>
+    new URLSearchParams(window.location.search).get('pay') ?? ''
+  );
   const [fundingNudge, setFundingNudge] = useState(false);
   const nudgedHash = useRef<string | null>(null);
   // Tracks whether the user clicked "Bridge" without a wallet — after
@@ -377,11 +381,20 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
       {supportOpen && (
         <Dialog
           className="hf-support-modal"
-          title="Pay someone on Arc"
+          title={(
+            <span className="hf-pay-dialog-title">
+              <span>Unified Payments on <img src="/brand/arc-logo.svg" alt="Arc" /></span>
+            </span>
+          )}
+          ariaLabel="Unified Payments on Arc"
           onClose={() => {
             setSupportOpen(false);
             setView('human');
-            if (new URLSearchParams(window.location.search).has('envelope')) {
+            if (
+              ['envelope', 'pay', 'payProfile', 'claimError'].some((key) =>
+                new URLSearchParams(window.location.search).has(key)
+              )
+            ) {
               window.history.replaceState(null, '', window.location.pathname);
             }
           }}
@@ -409,7 +422,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             <X size={15} />
           </button>
           <p>Your USDC is now on Arc.</p>
-          <h3>Ready to pay someone?</h3>
+          <h3>Send it by username.</h3>
           <button
             type="button"
             onClick={() => {
@@ -419,7 +432,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
           >
             Create a payment <ArrowUpRight size={14} />
           </button>
-          <small>Send by X username. They claim on Arc.</small>
+          <small>Pay a Hopfast ID directly or create a private X claim.</small>
         </aside>
       )}
 

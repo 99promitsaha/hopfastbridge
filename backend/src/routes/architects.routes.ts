@@ -6,7 +6,6 @@ import {
   createPublicClient,
   http,
   parseUnits,
-  formatUnits,
   keccak256,
   stringToHex,
   verifyMessage,
@@ -19,10 +18,11 @@ import { env } from "../config/env.js";
 import {
   ArchitectEnvelope,
   ArchitectAuth,
+  PaymentProfile,
 } from "../models/ArchitectEnvelope.js";
 import { isDatabaseReady } from "../config/db.js";
-import { sendXEnvelope } from "../lib/xDelivery.js";
 const router = Router();
+const PUBLIC_ARC_RPC_URL = "https://rpc.mainnet.arc.io";
 const random = () => randomBytes(32).toString("hex");
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 const client = createPublicClient({ transport: http(env.ARC_RPC_URL) });
@@ -117,10 +117,9 @@ router.get("/architects/config", async (_req, res, next) => {
     }
     res.json({
       ready,
-      deliveryEnabled: env.X_DELIVERY_ENABLED && !!env.X_BOT_ACCESS_TOKEN,
       contract: env.ARCHITECT_ESCROW_ADDRESS,
       chainId: env.ARCHITECT_CHAIN_ID,
-      rpcUrl: env.ARC_RPC_URL,
+      rpcUrl: PUBLIC_ARC_RPC_URL,
       feeBps: 250,
       admin: env.ARCHITECT_ADMIN_ADDRESS,
       treasury: env.ARCHITECT_TREASURY_ADDRESS,
@@ -130,7 +129,7 @@ router.get("/architects/config", async (_req, res, next) => {
       ready: false,
       contract: env.ARCHITECT_ESCROW_ADDRESS,
       chainId: env.ARCHITECT_CHAIN_ID,
-      rpcUrl: env.ARC_RPC_URL,
+      rpcUrl: PUBLIC_ARC_RPC_URL,
       feeBps: 250,
       error: "Escrow configuration has not been verified.",
     });
@@ -257,75 +256,56 @@ router.post("/architects/mine", async (req, res, next) => {
     next(e);
   }
 });
-router.post("/architects/envelopes/:id/deliver", async (req, res, next) => {
+router.post("/architects/profile", async (req, res, next) => {
   try {
-    if (!env.X_DELIVERY_ENABLED || !env.X_BOT_ACCESS_TOKEN)
-      return res.status(503).json({
-        error:
-          "Agent delivery is not enabled. Share the private claim link instead.",
-      });
     const wallet = await authenticate(req.body);
-    const access = token(req);
-    const e = await ArchitectEnvelope.findOne({
-      envelopeId: req.params.id,
-      funder: wallet,
-      accessHash: hash(access),
+    const profile = await PaymentProfile.findOne({ wallet });
+    res.json({ profile: profile ? publicProfile(profile) : null });
+  } catch (e) {
+    next(e);
+  }
+});
+router.get("/architects/profile/wallet/:wallet", async (req, res, next) => {
+  try {
+    const parsed = walletSchema.safeParse(req.params.wallet);
+    if (!parsed.success)
+      return res.status(400).json({ error: "Invalid wallet address." });
+    const profile = await PaymentProfile.findOne({
+      wallet: parsed.data.toLowerCase(),
     });
-    if (!e) return res.status(404).json({ error: "Envelope not found." });
-    const chain = await read(e.envelopeId);
-    if (
-      chain[4] !== 1 ||
-      chain[1] !== e.xIdentity ||
-      chain[2].toString() !== e.gross ||
-      chain[0].toLowerCase() !== e.funder ||
-      chain[3] * 1000n <= BigInt(Date.now())
-    )
-      return res
-        .status(409)
-        .json({ error: "Envelope is not funded or has expired." });
-    const locked = await ArchitectEnvelope.findOneAndUpdate(
-      { _id: e._id, deliveryState: "not_sent" },
-      { $set: { deliveryState: "sending" } },
-      { new: true },
-    );
-    if (!locked)
-      return res.status(409).json({
-        error:
-          "Delivery has already been attempted. Share the link if they have not received it.",
-      });
-    const gross = BigInt(e.gross),
-      net = gross - (gross * 250n + 9999n) / 10000n;
-    const text = `@${e.handle}, an architect has backed your work on Arc with ${formatUnits(net, 6)} USDC.\n\n${e.message}\n\nVerify your X account and claim before ${new Date(Number(chain[3]) * 1000).toISOString()}:\n${env.APP_BASE_URL}/?envelope=${e.envelopeId}#access=${access}\n\nHopfast will never ask for your seed phrase.`;
-    try {
-      const response = await sendXEnvelope(e.xId, text);
-      const result = (await response.json()) as {
-        data?: { dm_event_id?: string };
-      };
-      await ArchitectEnvelope.updateOne(
-        { _id: e._id },
-        {
-          $set: {
-            deliveryState: response.ok ? "sent" : "failed",
-            deliveryEventId: result.data?.dm_event_id,
-          },
-        },
-      );
-      if (!response.ok)
-        return res.status(502).json({
-          error:
-            "X did not accept delivery. Share the private claim link instead.",
-        });
-      res.json({ sent: true });
-    } catch {
-      await ArchitectEnvelope.updateOne(
-        { _id: e._id },
-        { $set: { deliveryState: "uncertain" } },
-      );
-      res.status(502).json({
-        error:
-          "Delivery could not be confirmed. It will not be retried automatically; share the link if needed.",
-      });
-    }
+    res.json({ profile: profile ? publicProfile(profile) : null });
+  } catch (e) {
+    next(e);
+  }
+});
+router.get("/architects/profiles/:handle", async (req, res, next) => {
+  try {
+    const handle = String(req.params.handle).replace(/^@/, "").toLowerCase();
+    if (!/^[a-z0-9_]{1,15}$/.test(handle))
+      return res.status(400).json({ error: "Invalid Hopfast ID." });
+    const profile = await PaymentProfile.findOne({ handle });
+    if (!profile) return res.status(404).json({ error: "Hopfast ID not found." });
+    res.json({ profile: publicProfile(profile) });
+  } catch (e) {
+    next(e);
+  }
+});
+router.post("/architects/profile/x", async (req, res, next) => {
+  try {
+    const wallet = await authenticate(req.body);
+    const state = random(), browser = random(), verifier = random();
+    await ArchitectAuth.create({
+      tokenHash: hash(state),
+      kind: "profile_oauth",
+      wallet,
+      verifier,
+      browserHash: hash(browser),
+      expiresAt: new Date(Date.now() + 600000),
+    });
+    const start = new URL("/api/architects/x/authorize", env.X_CALLBACK_URL);
+    start.searchParams.set("state", state);
+    start.searchParams.set("browser", browser);
+    res.json({ url: start.toString() });
   } catch (e) {
     next(e);
   }
@@ -392,11 +372,11 @@ router.get("/architects/x/authorize", async (req, res) => {
     const browser = String(req.query.browser ?? "");
     const auth = await ArchitectAuth.findOne({
       tokenHash: hash(state),
-      kind: "oauth",
       browserHash: hash(browser),
       expiresAt: { $gt: new Date() },
     });
-    if (!auth) throw new Error("X sign-in expired.");
+    if (!auth || !["oauth", "profile_oauth"].includes(auth.kind))
+      throw new Error("X sign-in expired.");
     res.cookie("hf_x_state", browser, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
@@ -431,7 +411,7 @@ router.get("/architects/x/callback", async (req, res) => {
         ?.slice(11) ?? "";
     const auth = await ArchitectAuth.findOneAndDelete({
       tokenHash: hash(String(req.query.state)),
-      kind: "oauth",
+      kind: { $in: ["oauth", "profile_oauth"] },
       browserHash: hash(browser),
       expiresAt: { $gt: new Date() },
     });
@@ -460,6 +440,21 @@ router.get("/architects/x/callback", async (req, res) => {
     if (!response.ok || !body.access_token)
       throw new Error("X token exchange failed.");
     const user = await xRequest("users/me", body.access_token);
+    if (auth.kind === "profile_oauth") {
+      const handle = user.username.toLowerCase();
+      await PaymentProfile.deleteMany({
+        $or: [
+          { handle, xId: { $ne: user.id } },
+          { wallet: auth.wallet, xId: { $ne: user.id } },
+        ],
+      });
+      await PaymentProfile.findOneAndUpdate(
+        { xId: user.id },
+        { $set: { handle, wallet: auth.wallet } },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
+      return res.redirect(`${env.APP_BASE_URL}/?payProfile=1`);
+    }
     const e = await ArchitectEnvelope.findOne({ envelopeId: auth.envelopeId });
     if (!e || user.id !== e.xId)
       throw new Error("Sign in with the X account this envelope was sent to.");
@@ -483,7 +478,9 @@ router.post(
   "/architects/envelopes/:id/authorization",
   async (req, res, next) => {
     try {
-      const auth = await ArchitectAuth.findOne({
+      // A verified X session may mint exactly one short-lived claim voucher.
+      // Consuming it here limits replay even if the fragment leaks after use.
+      const auth = await ArchitectAuth.findOneAndDelete({
         tokenHash: hash(token(req)),
         kind: "claim",
         envelopeId: req.params.id,
@@ -564,3 +561,15 @@ router.use(
   },
 );
 export default router;
+
+function publicProfile(profile: { handle: string; wallet: string; xId: string }) {
+  const payUrl = new URL(env.APP_BASE_URL);
+  payUrl.searchParams.set("pay", profile.handle);
+  return {
+    handle: profile.handle,
+    wallet: profile.wallet,
+    vpa: `${profile.handle}@hopfast`,
+    payUrl: payUrl.toString(),
+    verifiedBy: "X",
+  };
+}

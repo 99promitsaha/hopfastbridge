@@ -28,9 +28,19 @@ export function formatUnits(value: bigint, decimals: number, precision = 6): str
 }
 
 export function formatUsd(value: number): string {
+  if (value > 0 && value < 0.001) return '<$0.001';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
-    maximumFractionDigits: 2
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3
   }).format(value);
+}
+
+export function formatDisplayAmount(value: string | number, places = 3): string {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numeric)) return String(value);
+  if (numeric > 0 && numeric < 10 ** -places)
+    return `<${(10 ** -places).toFixed(places)}`;
+  return numeric.toFixed(places).replace(/\.?0+$/, '');
 }

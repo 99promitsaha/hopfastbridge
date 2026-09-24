@@ -1,10 +1,12 @@
 import {
   ArrowRight,
-  CircleDollarSign,
+  AtSign,
   Clock3,
   Coins,
   Globe2,
+  Link2,
   LockKeyhole,
+  QrCode,
   Route,
   SendHorizontal,
   ShieldCheck,
@@ -25,13 +27,13 @@ export function LandingView({
   onBridge: () => void;
   onPayAnyone: () => void;
 }) {
-  const [paymentsReady, setPaymentsReady] = useState(false);
+  const [paymentsStatus, setPaymentsStatus] = useState<'checking' | 'live' | 'offline'>('checking');
   const [heroAction, setHeroAction] = useState<'Bridge to' | 'Pay on'>('Bridge to');
 
   useEffect(() => {
     architectApi<ArchitectConfig>('/config')
-      .then((config) => setPaymentsReady(config.ready))
-      .catch(() => {});
+      .then((config) => setPaymentsStatus(config.ready ? 'live' : 'offline'))
+      .catch(() => setPaymentsStatus('offline'));
   }, []);
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export function LandingView({
         <div className="hf-product-hero-copy">
           <p className="hf-product-eyebrow">
             <span className="hf-product-live-dot" aria-hidden="true" />
-            Live on Arc
+            Unified Payments App on Arc. From 🇮🇳 to 🌏
           </p>
           <h1 id="home-title" className="hf-rotating-hero" aria-label="Bridge to and pay on Arc">
             <span className="hf-rotating-copy" aria-hidden="true">
@@ -70,9 +72,8 @@ export function LandingView({
             </span>
           </h1>
           <p className="hf-product-lead">
-            Bring USDC in from the network you already use. Then send it to a
-            person through their X username. Quotes, approvals, and payment status
-            stay in one place.
+            Compare routes, send USDC to an X username, and receive
+            payments through your own Hopfast link or QR.
           </p>
           <div className="hf-product-actions">
             <button type="button" className="hf-home-primary" onClick={onBridge}>
@@ -84,8 +85,8 @@ export function LandingView({
           </div>
           <div className="hf-product-proof" aria-label="Product assurances">
             <span><Route size={14} /> LI.FI + Squid routes</span>
-            <span><Wallet2 size={14} /> You approve every move</span>
-            <span><ShieldCheck size={14} /> Check realtime status</span>
+            <span><Wallet2 size={14} /> Your wallet stays in control</span>
+            <span><ShieldCheck size={14} /> Live transaction status</span>
           </div>
         </div>
 
@@ -120,7 +121,7 @@ export function LandingView({
               />
             </div>
             <div className="hf-terminal-payment">
-              <span className="hf-terminal-payment-icon"><CircleDollarSign size={16} /></span>
+              <span className="hf-terminal-payment-icon"><img src="/token-icons/usdc.svg" alt="" /></span>
               <div><small>USDC RECEIVED</small><strong>@helloworld</strong></div>
               <b>100 <small>USDC</small></b>
             </div>
@@ -131,12 +132,12 @@ export function LandingView({
       <section className="hf-product-duo" aria-labelledby="product-title">
         <header className="hf-product-section-heading">
           <div>
-            <p className="hf-product-eyebrow">One balance, two useful moves</p>
-            <h2 id="product-title">Your money should not stop at the bridge.</h2>
+            <p className="hf-product-eyebrow">One place to move and pay</p>
+            <h2 id="product-title">Bridge in. Pay by username. Receive by link.</h2>
           </div>
           <p>
-            Hopfast gets USDC onto Arc, then gives you a direct way to send it
-            to someone. Each step is clear before you approve it.
+            Bring USDC onto Arc, pay an existing Hopfast ID directly, or create
+            a private claim for any X username.
           </p>
         </header>
 
@@ -150,8 +151,8 @@ export function LandingView({
               <p className="hf-product-index">01 · BRIDGE</p>
               <h3>Get USDC onto Arc.</h3>
               <p>
-                Pick a source network and compare live routes. If a provider
-                cannot return a usable quote, it stays out of the list.
+                Choose where your USDC starts. Hopfast compares live LI.FI and
+                Squid routes and shows only the quotes you can use.
               </p>
               <button type="button" onClick={onBridge}>Compare routes <ArrowRight size={15} /></button>
             </div>
@@ -184,23 +185,23 @@ export function LandingView({
                   </div>
                 </div>
               </div>
-              <div className="hf-route-preview-meta"><span>Fees itemised</span></div>
+              <div className="hf-route-preview-meta"><span>Live quotes · tracked through arrival</span></div>
             </div>
           </article>
 
           <article className="hf-product-card hf-product-card-pay">
             <div className="hf-product-card-top">
               <span className="hf-product-card-icon"><UserRound size={20} /></span>
-              <span className="hf-product-status"><i className={paymentsReady ? '' : 'is-waiting'} /> {paymentsReady ? 'Payments live' : 'Checking payments'}</span>
+              <span className="hf-product-status"><i className={paymentsStatus === 'live' ? '' : 'is-waiting'} /> {paymentsStatus === 'live' ? 'Payments live' : paymentsStatus === 'checking' ? 'Checking payments' : 'Payments unavailable'}</span>
             </div>
             <div>
               <p className="hf-product-index">02 · PAY</p>
-              <h3>Send USDC to a person.</h3>
+              <h3>Pay the person you know.</h3>
               <p>
-                Enter an X username and a message. They verify that account,
-                connect a wallet, and claim the payment on Arc.
+                Pay a Hopfast ID directly to its verified Arc wallet. If they do
+                not have one yet, address a private payment to their X username.
               </p>
-              <button type="button" onClick={onPayAnyone}>Create a payment <ArrowRight size={15} /></button>
+              <button type="button" onClick={onPayAnyone} disabled={paymentsStatus === 'offline'}>{paymentsStatus === 'offline' ? 'Payments temporarily unavailable' : 'Open payments'} <ArrowRight size={15} /></button>
             </div>
             <div className="hf-payment-preview" aria-hidden="true">
               <div className="hf-preview-card">
@@ -210,7 +211,7 @@ export function LandingView({
                 <em>PAYMENT ON ARC</em>
               </div>
               <div className="hf-preview-envelope">
-                <span><CircleDollarSign size={18} /></span>
+                <span><img className="hf-usdc-icon" src="/token-icons/usdc.svg" alt="" /></span>
                 <small>FOR</small>
                 <strong>@username</strong>
                 <em>100 USDC TO CLAIM</em>
@@ -222,54 +223,57 @@ export function LandingView({
 
       <section className="hf-product-journey" aria-labelledby="journey-title">
         <header>
-          <p className="hf-product-eyebrow">One continuous flow</p>
-          <h2 id="journey-title">From another network to another person.</h2>
-          <p>No handoff between a bridge, a spreadsheet, and a wallet address.</p>
+          <p className="hf-product-eyebrow">Private payments by X username</p>
+          <h2 id="journey-title">They do not need a wallet address ready.</h2>
+          <p>You create the payment and share its private link. The intended X account must verify before claiming.</p>
         </header>
         <ol>
-          <li><span>01</span><div><Route size={17} /><strong>Compare</strong><p>Choose the live route that works for your amount.</p></div></li>
-          <li><span>02</span><div><Wallet2 size={17} /><strong>Approve</strong><p>Your wallet signs the route. Hopfast never holds it.</p></div></li>
-          <li><span>03</span><div><UserRound size={17} /><strong>Address</strong><p>Use the recipient’s X username instead of asking for a wallet.</p></div></li>
-          <li><span>04</span><div><LockKeyhole size={17} /><strong>Verify</strong><p>Only the verified account can claim to an Arc wallet.</p></div></li>
+          <li><span>01</span><div><AtSign size={17} /><strong>Address</strong><p>Enter their X username and the USDC amount.</p></div></li>
+          <li><span>02</span><div><Wallet2 size={17} /><strong>Fund</strong><p>Your wallet deposits the payment into the Arc contract.</p></div></li>
+          <li><span>03</span><div><SendHorizontal size={17} /><strong>Share</strong><p>Send the private claim link yourself, wherever you already talk.</p></div></li>
+          <li><span>04</span><div><LockKeyhole size={17} /><strong>Claim</strong><p>They verify the matching X account and choose their Arc wallet.</p></div></li>
         </ol>
       </section>
 
       <section className="hf-product-control" aria-labelledby="control-title">
         <header className="hf-product-section-heading">
           <div>
-            <p className="hf-product-eyebrow">Built for real money</p>
-            <h2 id="control-title">The important details stay in view.</h2>
+            <p className="hf-product-eyebrow">Before you approve</p>
+            <h2 id="control-title">See exactly where the USDC goes.</h2>
           </div>
           <p>
-            Amounts, fees, routes, timing, and status are shown where the
-            decision happens, not buried after it.
+            Hopfast keeps the route, recipient, amount, and transaction state
+            visible from quote to confirmation.
           </p>
         </header>
         <div className="hf-control-grid">
-          <article><span><Coins size={19} /></span><h3>Know what arrives.</h3><p>Every usable route shows the expected output, estimated time, and fee breakdown before you sign.</p></article>
-          <article><span><ShieldCheck size={19} /></span><h3>Keep wallet control.</h3><p>Hopfast prepares the transaction. Your connected wallet approves it and sends it.</p></article>
-          <article><span><Clock3 size={19} /></span><h3>Track what happens next.</h3><p>Bridge progress and sent-payment status stay available after the wallet prompt closes.</p></article>
-          <article><span><Route size={19} /></span><h3>See only usable routes.</h3><p>Providers that cannot quote your amount stay out of the decision instead of filling the screen with errors.</p></article>
+          <article><span><Coins size={19} /></span><h3>Expected arrival</h3><p>Compare the USDC expected on Arc, minimum received, route cost, and estimated time.</p></article>
+          <article><span><ShieldCheck size={19} /></span><h3>Wallet approval</h3><p>Hopfast prepares each transaction. Your wallet shows it before anything moves.</p></article>
+          <article><span><Clock3 size={19} /></span><h3>Live status</h3><p>Follow bridges and payments after the wallet closes, with explorer links when available.</p></article>
+          <article><span><Route size={19} /></span><h3>Usable quotes only</h3><p>A provider appears only when it returns an executable route for your transfer.</p></article>
         </div>
       </section>
 
-      <section className="hf-product-pricing" aria-labelledby="pricing-title">
-        <div>
-          <p className="hf-product-eyebrow">Clear costs</p>
-          <h2 id="pricing-title">See the fee before the signature.</h2>
+      <section className="hf-product-pricing hf-product-identity" aria-labelledby="identity-title">
+        <div className="hf-identity-story">
+          <p className="hf-product-eyebrow">Your payment identity on Arc</p>
+          <h2 id="identity-title">Give people one reliable way to pay you.</h2>
+          <p>Verify your X username once and point your Hopfast ID, link, and QR to the Arc wallet you control.</p>
+          <button type="button" onClick={onPayAnyone}>Create your Hopfast ID <ArrowRight size={15} /></button>
         </div>
-        <dl>
-          <div><dt>Bridge routes</dt><dd>Provider, network, and Hopfast fees are itemised in the selected quote.</dd></div>
-          <div><dt>Pay on Arc</dt><dd>2.5% is deducted when the payment is deposited. Claiming adds no second Hopfast fee.</dd></div>
-          <div><dt>Network gas</dt><dd>Gas is separate and shown by your wallet before you approve a transaction.</dd></div>
-        </dl>
+        <div className="hf-identity-bento" aria-label="Hopfast ID features">
+          <article className="hf-identity-bento-id"><AtSign size={18} /><small>HOPFAST ID</small><strong>username<span>@hopfast</span></strong><p>A memorable payment ID backed by your verified X account.</p></article>
+          <article><QrCode size={24} /><strong>Personal QR</strong><p>Download it for profiles, pages, presentations, or in-person payments.</p><div className="hf-mini-qr" aria-hidden="true"><i/><i/><i/><i/><i/><i/><i/><i/><i/></div></article>
+          <article><Link2 size={24} /><strong>Payment link</strong><p>Share a link that opens with your verified recipient details already filled.</p><code>hopfast.xyz/?pay=username</code></article>
+          <article className="hf-identity-bento-usdc"><img src="/token-icons/usdc.svg" alt="USDC" /><strong>Direct USDC on Arc</strong><p>Payments go from the sender's wallet to your connected Arc wallet.</p></article>
+        </div>
       </section>
 
       <section className="hf-product-final">
         <div className="hf-product-final-mark"><img src="/brand/arc-mark.svg" alt="" /></div>
         <div>
-          <p className="hf-product-eyebrow">Ready when you are</p>
-          <h2>Bring USDC in. Send it where it needs to go.</h2>
+          <p className="hf-product-eyebrow">Your next Arc payment</p>
+          <h2>Move USDC onto Arc, then send it by username.</h2>
         </div>
         <div className="hf-product-final-actions">
           <button type="button" className="hf-home-primary" onClick={onBridge}>Bridge USDC <ArrowRight size={16} /></button>

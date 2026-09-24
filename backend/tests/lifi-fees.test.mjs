@@ -6,6 +6,7 @@ const { requestLiFiQuote } = await import('../dist/lib/lifiClient.js');
 const { env } = await import('../dist/config/env.js');
 const { quotedHopfastFeeUsd } = await import('../dist/lib/hopfastFee.js');
 const address = '0x' + '1'.repeat(40);
+const routedCalldata = `0x12345678${address.slice(2).padStart(64, '0')}`;
 const commission = {
   amountUSD: '0.0122',
   percentage: '0.0005',
@@ -26,7 +27,7 @@ const quote = {
       estimate: { feeCosts: [commission] },
     },
   ],
-  transactionRequest: { from: address, to: address, data: '0x', value: '0x64' },
+  transactionRequest: { from: address, to: address, data: routedCalldata, value: '0x64' },
 };
 test('five basis points is sent once; commission is displayed without increasing costs or changing transaction/output', async () => {
   const original = global.fetch;
@@ -187,7 +188,7 @@ test('Squid Arc routes are forwarded when the live Squid registry lists Arc', as
         route: {
           quoteId: 'squid-arc',
           estimate: { toAmount: '99000000', toAmountMin: '98000000' },
-          transactionRequest: { target: address, data: '0x' },
+          transactionRequest: { target: address, data: routedCalldata },
         },
       })
     );

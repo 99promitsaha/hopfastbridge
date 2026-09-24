@@ -8,9 +8,9 @@ export function fundingAmounts(amount: string, basisPoints: 250) {
     const fee = (units * BigInt(basisPoints) + 9999n) / 10000n;
     if (fee >= units) return null;
     return {
-      amount: formatUnits(units - fee, 6, 6),
-      fee: formatUnits(fee, 6, 6),
-      total: formatUnits(units, 6, 6),
+      amount: formatUnits(units - fee, 6, 3),
+      fee: formatUnits(fee, 6, 3),
+      total: formatUnits(units, 6, 3),
     };
   } catch {
     return null;
