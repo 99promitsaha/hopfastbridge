@@ -504,6 +504,14 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .hf-support-safety { gap: 8px; color: #5f7490; font-size: 9px; }
 .hf-support-success { padding: 27px 3px 5px; }
 .hf-support-success h3 { font-size: 26px; }
+.hf-recipient-confirmation { display: flex; min-height: 430px; padding: 32px 10px 18px; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.hf-recipient-confirmation-icon { display: grid; width: 54px; height: 54px; margin-bottom: 18px; place-items: center; border: 1px solid rgba(79, 127, 183, 0.18); border-radius: 17px; background: linear-gradient(145deg, rgba(255,255,255,.92), rgba(213,231,251,.8)); color: #285c91; box-shadow: 0 18px 36px -26px rgba(20,57,99,.75); }
+.hf-recipient-confirmation > span { color: #6a829e; font-size: 8px; font-weight: 750; letter-spacing: .14em; }
+.hf-recipient-confirmation h3 { max-width: 360px; margin: 12px auto 0; color: #17365d; font-size: 25px; line-height: 1.12; letter-spacing: -1px; }
+.hf-recipient-confirmation > p { max-width: 340px; margin: 13px auto 0; color: #607691; font-size: 11px; line-height: 1.65; }
+.hf-recipient-confirmation > small { max-width: 350px; margin-top: 18px; padding: 11px 13px; border: 1px solid rgba(77,119,167,.13); border-radius: 12px; background: rgba(235,244,254,.72); color: #526d8c; font-size: 9px; line-height: 1.55; }
+.hf-recipient-confirmation-actions { display: grid; width: 100%; margin-top: 23px; grid-template-columns: 1fr 1.25fr; gap: 9px; }
+.hf-recipient-confirmation-actions .hf-support-secondary { margin-top: 0; }
 .hf-share-message { margin: 14px 0; padding: 14px; border: 1px solid rgba(77,119,167,.14); border-radius: 14px; background: rgba(244,249,255,.72); text-align: left; }
 .hf-share-message small { color: #7389a3; font-size: 7px; font-weight: 750; letter-spacing: .13em; }
 .hf-share-message p { margin: 7px 0 0; color: #385b82; font-size: 9px; line-height: 1.6; overflow-wrap: anywhere; }

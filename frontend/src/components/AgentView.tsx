@@ -45,6 +45,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
   const [notice, setNotice] = useState('');
   const [claimUrl, setClaimUrl] = useState('');
   const [pending, setPending] = useState<DraftEnvelope | null>(null);
+  const [confirmRecipient, setConfirmRecipient] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState('');
   const scannerVideo = useRef<HTMLVideoElement>(null);
@@ -141,7 +142,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
   function reset() {
     setHandle(''); setAmount('');
     setMessage('A payment is waiting for you on Arc. Sent with Hopfast.');
-    setPending(null); setClaimUrl(''); setError(''); setNotice('');
+    setPending(null); setClaimUrl(''); setConfirmRecipient(false); setError(''); setNotice('');
   }
 
   if (isClaim) return (
@@ -213,8 +214,20 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
             <div className="hf-support-card" aria-hidden="true"><div><span>hopfast</span><img src="/brand/arc-logo.svg" alt="" /></div><strong>{amounts?.total ?? '—'} <small>USDC</small></strong><span>PRIVATE PAYMENT · ARC</span></div>
             <div className="hf-support-safety"><p><Check size={14} /> Unclaimed funds can be reclaimed after 30 days.</p><p><MessageCircle size={14} /> Stuck somewhere? <a href="https://t.me/promitsaha" target="_blank" rel="noopener noreferrer">drop a message</a> and we’ll help.</p></div>
           </section>
-          <form className="hf-support-form" onSubmit={(event) => { event.preventDefault(); void fund(); }}>
-            {!claimUrl ? <>
+          <form className="hf-support-form" onSubmit={(event) => { event.preventDefault(); setConfirmRecipient(true); }}>
+            {!claimUrl ? confirmRecipient ? (
+              <div className="hf-recipient-confirmation" role="alertdialog" aria-labelledby="recipient-confirmation-title" aria-describedby="recipient-confirmation-note">
+                <div className="hf-recipient-confirmation-icon" aria-hidden="true"><AtSign size={22} /></div>
+                <span>CONFIRM RECIPIENT</span>
+                <h3 id="recipient-confirmation-title">Are you sure @{cleanHandle} is who you want to pay?</h3>
+                <p>Only the person who verifies this X account can claim the payment.</p>
+                <small id="recipient-confirmation-note">If the username is incorrect or the payment is not claimed, you can reclaim the funds after 30 days.</small>
+                <div className="hf-recipient-confirmation-actions">
+                  <button className="hf-support-secondary" type="button" disabled={busy} onClick={() => setConfirmRecipient(false)}><X size={15} /> No, go back</button>
+                  <button className="hf-support-primary" type="button" disabled={busy} onClick={() => void fund()}>{busy ? 'Waiting for wallet approval…' : 'Yes, continue'} <Check size={15} /></button>
+                </div>
+              </div>
+            ) : <>
               <label htmlFor="envelope-handle">X username</label>
               <div className="hf-support-field hf-support-handle"><img src="/brand/x.svg" alt="" /><input id="envelope-handle" disabled={busy || !!pending} value={handle} maxLength={16} placeholder="username" onChange={(event) => setHandle(event.target.value)} /></div>
               {handle && !validHandle && <small role="alert">Enter a valid X username.</small>}
