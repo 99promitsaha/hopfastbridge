@@ -1,62 +1,67 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useEffect, useState, useRef } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   DemoWalletConnector,
   PrivyWalletConnector,
   usePrivyAuth,
   type PrivyWalletBridge,
-} from './components/WalletConnector';
-import { parseUnits } from './lib/amount';
-import { makeBalanceKey } from './lib/swap';
-import { computeUsdValue } from './services/priceService';
-import { PaymentReview } from './components/PaymentReview';
+} from "./components/WalletConnector";
+import { parseUnits } from "./lib/amount";
+import { makeBalanceKey } from "./lib/swap";
+import { computeUsdValue } from "./services/priceService";
+import { PaymentReview } from "./components/PaymentReview";
 import {
   ArrowUpRight,
   ArrowLeftRight,
   BarChart3,
   WalletCards,
   X,
-} from 'lucide-react';
-import { Dialog } from './components/Dialog';
-import { AgentView } from './components/AgentView';
-import { ArchitectDeployment } from './components/ArchitectDeployment';
-import { LandingView } from './components/LandingView';
-import { SwapView } from './components/SwapView';
-import { StatsView } from './components/StatsView';
-import { TransactionHistoryModal } from './components/TransactionHistoryModal';
-import { CHAIN_BY_KEY } from './lib/chains';
-import { usePrices } from './hooks/usePrices';
-import { useTokenBalances } from './hooks/useTokenBalances';
-import { useSwapQuotes } from './hooks/useSwapQuotes';
-import { useSwapExecution } from './hooks/useSwapExecution';
-import { useTransactionHistory } from './hooks/useTransactionHistory';
-import { DEFAULT_DRAFT, HAS_PRIVY } from './constants';
-import type { EntryView, SwapDraft } from './types';
+} from "lucide-react";
+import { Dialog } from "./components/Dialog";
+import { AgentView } from "./components/AgentView";
+import { ArchitectDeployment } from "./components/ArchitectDeployment";
+import { LandingView } from "./components/LandingView";
+import { SwapView } from "./components/SwapView";
+import { StatsView } from "./components/StatsView";
+import { TransactionHistoryModal } from "./components/TransactionHistoryModal";
+import { CHAIN_BY_KEY } from "./lib/chains";
+import { usePrices } from "./hooks/usePrices";
+import { useTokenBalances } from "./hooks/useTokenBalances";
+import { useSwapQuotes } from "./hooks/useSwapQuotes";
+import { useSwapExecution } from "./hooks/useSwapExecution";
+import { useTransactionHistory } from "./hooks/useTransactionHistory";
+import { DEFAULT_DRAFT, HAS_PRIVY } from "./constants";
+import type { EntryView, SwapDraft } from "./types";
 
 type AuthState = ReturnType<typeof usePrivyAuth>;
 
 function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   const [view, setView] = useState<EntryView>(() =>
-    new URLSearchParams(window.location.search).get('deploy')==='architects' && ['localhost','127.0.0.1'].includes(window.location.hostname) ? 'deployment' : new URLSearchParams(window.location.search).has('payment')
-      ? 'payment'
-      : 'human'
+    new URLSearchParams(window.location.search).get("deploy") ===
+      "architects" &&
+    ["localhost", "127.0.0.1"].includes(window.location.hostname)
+      ? "deployment"
+      : new URLSearchParams(window.location.search).has("payment")
+        ? "payment"
+        : "human",
   );
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [walletBridge, setWalletBridge] = useState<PrivyWalletBridge | null>(
-    null
+    null,
   );
   const [draft, setDraft] = useState<SwapDraft>(DEFAULT_DRAFT);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
-  const [supportOpen, setSupportOpen] = useState(() =>
-    new URLSearchParams(window.location.search).has('envelope') ||
-    new URLSearchParams(window.location.search).has('claimError') ||
-    new URLSearchParams(window.location.search).has('pay') ||
-    new URLSearchParams(window.location.search).has('payProfile')
+  const [supportOpen, setSupportOpen] = useState(
+    () =>
+      new URLSearchParams(window.location.search).has("envelope") ||
+      new URLSearchParams(window.location.search).has("claimError") ||
+      new URLSearchParams(window.location.search).has("pay") ||
+      new URLSearchParams(window.location.search).has("payProfile"),
   );
-  const [envelopeHandle] = useState(() =>
-    new URLSearchParams(window.location.search).get('pay') ?? ''
+  const [envelopeHandle] = useState(
+    () => new URLSearchParams(window.location.search).get("pay") ?? "",
   );
   const [fundingNudge, setFundingNudge] = useState(false);
   const nudgedHash = useRef<string | null>(null);
@@ -103,7 +108,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   } = useSwapQuotes(activeWalletAddress);
 
   const onPostSwap = useCallback(() => {
-    setDraft((c) => ({ ...c, amount: '' }));
+    setDraft((c) => ({ ...c, amount: "" }));
     clearQuotes();
     scheduleBalanceRefresh();
   }, [clearQuotes, scheduleBalanceRefresh]);
@@ -127,7 +132,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   // deducted amount is already settled. 'failed' also refreshes in case gas
   // was consumed by a reverted on-chain tx.
   useEffect(() => {
-    if (txStatus?.stage === 'completed' || txStatus?.stage === 'failed') {
+    if (txStatus?.stage === "completed" || txStatus?.stage === "failed") {
       refreshBalancesNow();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,9 +148,9 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
 
   useEffect(() => {
     if (
-      txStatus?.stage === 'completed' &&
-      txStatus.toChain === 'arc' &&
-      txStatus.fromChain !== 'arc' &&
+      txStatus?.stage === "completed" &&
+      txStatus.toChain === "arc" &&
+      txStatus.fromChain !== "arc" &&
       nudgedHash.current !== txStatus.hash
     ) {
       nudgedHash.current = txStatus.hash;
@@ -162,7 +167,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
 
   // ── Scroll to top on view change ──
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, [view]);
 
   // Auto-open swap modal after wallet connects when the user clicked Bridge
@@ -197,7 +202,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
     const volumeUsd = computeUsdValue(
       prices,
       draft.fromTokenSymbol,
-      draft.amount
+      draft.amount,
     )?.value;
 
     doExecuteSwap(
@@ -209,7 +214,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
       HAS_PRIVY,
       Boolean(walletBridge),
       isAmountInsufficient,
-      volumeUsd
+      volumeUsd,
     );
   }, [
     draft,
@@ -232,11 +237,11 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   }, [clearDebounce, draftRef, clearQuotes, clearError]);
 
   const handleBack = useCallback(() => {
-    window.history.replaceState(null, '', window.location.pathname);
-    setView('human');
+    window.history.replaceState(null, "", window.location.pathname);
+    setView("human");
     setSupportOpen(false);
     closeSwap();
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo({ top: 0, behavior: "instant" });
   }, [closeSwap]);
 
   return (
@@ -258,24 +263,24 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
         </button>
         <nav className="hf-nav" aria-label="Main navigation">
           <button
-            className={view === 'human' && !supportOpen ? 'active' : ''}
+            className={view === "human" && !supportOpen ? "active" : ""}
             aria-label="Bridge (live)"
-            aria-current={view === 'human' && !supportOpen ? 'page' : undefined}
+            aria-current={view === "human" && !supportOpen ? "page" : undefined}
             onClick={() => {
-              setView('human');
+              setView("human");
               setSupportOpen(false);
               closeSwap();
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
             <ArrowLeftRight size={15} />
             <span>Bridge</span>
           </button>
           <button
-            className={supportOpen ? 'active' : ''}
-            aria-current={supportOpen ? 'page' : undefined}
+            className={supportOpen ? "active" : ""}
+            aria-current={supportOpen ? "page" : undefined}
             onClick={() => {
-              setView('human');
+              setView("human");
               setSupportOpen(true);
             }}
           >
@@ -283,9 +288,9 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             <span>Pay on Arc</span>
           </button>
           <button
-            className={view === 'stats' ? 'active' : ''}
-            aria-current={view === 'stats' ? 'page' : undefined}
-            onClick={() => setView('stats')}
+            className={view === "stats" ? "active" : ""}
+            aria-current={view === "stats" ? "page" : undefined}
+            onClick={() => setView("stats")}
           >
             <BarChart3 size={15} />
             <span>Stats</span>
@@ -303,8 +308,13 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
 
       {/* Main Content */}
       <AnimatePresence mode="wait">
-        {view === 'deployment' && <ArchitectDeployment wallet={walletBridge} onConnect={privyAuth.connectWallet} />}
-        {view === 'payment' && (
+        {view === "deployment" && (
+          <ArchitectDeployment
+            wallet={walletBridge}
+            onConnect={privyAuth.connectWallet}
+          />
+        )}
+        {view === "payment" && (
           <PaymentReview
             walletBridge={walletBridge}
             onConnect={HAS_PRIVY ? privyAuth.connectWallet : undefined}
@@ -312,9 +322,9 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
           />
         )}
 
-        {view === 'stats' && <StatsView onBack={() => setView('human')} />}
+        {view === "stats" && <StatsView onBack={() => setView("human")} />}
 
-        {view === 'human' && (
+        {view === "human" && (
           <motion.main
             key="human"
             initial={{ opacity: 0, y: 18 }}
@@ -381,21 +391,23 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
       {supportOpen && (
         <Dialog
           className="hf-support-modal"
-          title={(
+          title={
             <span className="hf-pay-dialog-title">
-              <span>Unified Payments on <img src="/brand/arc-logo.svg" alt="Arc" /></span>
+              <span>
+                Unified Payments on <img src="/brand/arc-logo.svg" alt="Arc" />
+              </span>
             </span>
-          )}
+          }
           ariaLabel="Unified Payments on Arc"
           onClose={() => {
             setSupportOpen(false);
-            setView('human');
+            setView("human");
             if (
-              ['envelope', 'pay', 'payProfile', 'claimError'].some((key) =>
-                new URLSearchParams(window.location.search).has(key)
+              ["envelope", "pay", "payProfile", "claimError"].some((key) =>
+                new URLSearchParams(window.location.search).has(key),
               )
             ) {
-              window.history.replaceState(null, '', window.location.pathname);
+              window.history.replaceState(null, "", window.location.pathname);
             }
           }}
         >
@@ -478,14 +490,14 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             </p>
             <h3>Public blockchain data</h3>
             <p>
-              Wallet transactions are public and cannot be deleted. Contact{' '}
+              Wallet transactions are public and cannot be deleted. Contact{" "}
               <a
                 href="https://t.me/promitsaha"
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 @promitsaha
-              </a>{' '}
+              </a>{" "}
               about off-chain records.
             </p>
           </div>
@@ -495,11 +507,19 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
       {/* Footer */}
       <footer className="hf-footer">
         <div className="hf-footer-brand">
-          <img className="hf-footer-hopfast" src="/brand/hopfast-mark.svg" alt="" />
-          <div><strong>hopfast.</strong><span>USDC in. Payments out. Built on Arc.</span></div>
+          <img
+            className="hf-footer-hopfast"
+            src="/brand/hopfast-mark.svg"
+            alt=""
+          />
+          <div>
+            <strong>hopfast.</strong>
+            <span>USDC in. Payments out. Built on Arc.</span>
+          </div>
         </div>
         <div className="hf-footer-arc" aria-label="Built on Arc">
-          <span>BUILT ON</span><img src="/brand/arc-logo.svg" alt="Arc" />
+          <span>BUILT ON</span>
+          <img src="/brand/arc-logo.svg" alt="Arc" />
         </div>
         <div className="hf-footer-links">
           <a
