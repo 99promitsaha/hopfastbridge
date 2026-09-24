@@ -59,8 +59,7 @@ export function ProfilePayment({ handle, wallet, onConnect, onPayAnother }: {
       <span className="hf-support-eyebrow">PAYMENT LINK UNAVAILABLE</span>
       <h2>@{normalizedHandle} does not have an active Hopfast ID.</h2>
       <p>You can still send them a private payment addressed to their X username.</p>
-      <button className="hf-support-primary" type="button" onClick={onPayAnother}>Pay by X username <Send size={15} /></button>
-      {error && <p className="hf-support-error" role="alert">{error}</p>}
+      <button className="hf-support-primary hf-profile-fallback-action" type="button" onClick={onPayAnother}>Pay by X username <Send size={15} /></button>
     </section>
   );
 
