@@ -202,7 +202,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
               )}
               {directHandle && !/^[A-Za-z0-9_]{1,15}$/.test(directHandle.replace(/^@/, '').trim()) && <small role="alert">Enter a valid Hopfast ID or X username.</small>}
               <button className="hf-support-primary" type="submit" disabled={!/^[A-Za-z0-9_]{1,15}$/.test(directHandle.replace(/^@/, '').trim())}>Find recipient <ArrowIcon /></button>
-              <small className="hf-direct-pay-hint">No Hopfast ID yet? Choose “Pay an X username” above.</small>
+              <small className="hf-direct-pay-hint">No Hopfast ID yet? Choose “Pay an X username” above. Zero fees for Hopfast ID transfers.</small>
             </form>
           </div>
         ) : (
@@ -211,7 +211,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
             <div className="hf-support-intro"><span>PRIVATE PAYMENT</span><h2>Send USDC before you know their wallet.</h2><p>Address the payment to an X username. Only that verified account can connect an Arc wallet and claim it.</p></div>
             <div className="hf-red-packet" aria-hidden="true"><div className="hf-red-packet-seal"><img className="hf-usdc-icon" src="/token-icons/usdc.svg" alt="" /></div><span>FOR</span><strong>@{validHandle ? cleanHandle : 'username'}</strong><small>{amounts?.amount ?? '—'} USDC TO CLAIM</small></div>
             <div className="hf-support-card" aria-hidden="true"><div><span>hopfast</span><img src="/brand/arc-logo.svg" alt="" /></div><strong>{amounts?.total ?? '—'} <small>USDC</small></strong><span>PRIVATE PAYMENT · ARC</span></div>
-            <div className="hf-support-safety"><p><Check size={14} /> Unclaimed funds can be reclaimed after 30 days.</p><p><MessageCircle size={14} /> If you’re unable to recover funds, <a href="https://t.me/promitsaha" target="_blank" rel="noopener noreferrer">drop us a message</a> and we’ll help.</p></div>
+            <div className="hf-support-safety"><p><Check size={14} /> Unclaimed funds can be reclaimed after 30 days.</p><p><MessageCircle size={14} /> Stuck somewhere? <a href="https://t.me/promitsaha" target="_blank" rel="noopener noreferrer">drop a message</a> and we’ll help.</p></div>
           </section>
           <form className="hf-support-form" onSubmit={(event) => { event.preventDefault(); void fund(); }}>
             {!claimUrl ? <>
@@ -224,7 +224,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
               <label htmlFor="envelope-message">Private note</label>
               <textarea id="envelope-message" disabled={busy || !!pending} maxLength={280} rows={4} value={message} onChange={(event) => setMessage(event.target.value)} />
               <div className="hf-support-count">{message.length}/280</div>
-              <dl className="hf-support-fees"><div><dt>They receive</dt><dd>{amounts?.amount ?? '—'} USDC</dd></div><div><dt>Hopfast fee · 2.5%</dt><dd>{amounts?.fee ?? '—'} USDC</dd></div><div><dt>Wallet approves</dt><dd>{amounts?.total ?? '—'} USDC</dd></div></dl>
+              <dl className="hf-support-fees"><div><dt>Your friend receives</dt><dd>{amounts?.amount ?? '—'} USDC</dd></div><div><dt>Platform fee</dt><dd>{amounts?.fee ?? '—'} USDC</dd></div><div><dt>You pay</dt><dd>{amounts?.total ?? '—'} USDC</dd></div></dl>
               <button className="hf-support-primary" type="submit" disabled={busy || !config.ready || !validHandle || !amounts || !message.trim()}>{busy ? 'Waiting for wallet approval…' : wallet ? 'Fund private payment' : 'Connect wallet to continue'} <Send size={15} /></button>
               <button className="hf-support-secondary" type="button" onClick={onBack}>Need USDC? Bridge to Arc</button>
               <small className="hf-support-disclosure">Hopfast deducts 2.5% when you deposit. The recipient receives the amount shown above. The fee is not refunded if you later reclaim. Network gas is separate.</small>
