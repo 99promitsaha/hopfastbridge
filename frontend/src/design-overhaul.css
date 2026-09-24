@@ -458,6 +458,8 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .hf-profile-payment-state .hf-profile-fallback-action { width: min(100%, 250px); min-height: 50px; padding: 0 22px; justify-content: center; border-radius: 15px; font-size: .82rem; }
 .hf-contact-search { display: flex; max-width: 310px; min-height: 41px; align-items: center; gap: 8px; margin-top: 18px; padding: 0 12px; border: 1px solid rgba(75,117,166,.15); border-radius: 12px; background: rgba(247,251,255,.8); color: #7288a2; }
 .hf-contact-search input { width: 100%; border: 0; outline: 0; background: transparent; color: #193760; font: 500 10px var(--hf-font-body); }
+.hf-activity-kind { border-color: rgba(75,117,166,.14); background: rgba(226,238,251,.78); }
+.hf-activity-kind button.active { background: rgba(255,255,255,.9); }
 @media (max-width: 760px) {
   .hf-identity-onboarding { min-height: 440px; padding: 34px 22px; }
   .hf-identity-dashboard { grid-template-columns: 1fr; }

@@ -6,6 +6,7 @@ import { ARC_CHAIN_ID, ARC_EXPLORER, arcRpc, assertArcNetwork, parseUsdc, validA
 
 export interface Payment {
   id: string; tokenHash: string; walletAddress: string; recipient: string; amount: string; value: string;
+  recipientHandle?: string;
   memo: string; chainId: number; createdAt: string; expiresAt: string;
   status: 'awaiting_approval' | 'submitted' | 'completed' | 'failed' | 'expired' | 'cancelled';
   txHash?: string; explorerLink?: string; checkedAt?: string; trackingMessage?: string;
@@ -22,18 +23,33 @@ export function publicPayment(payment: Payment) {
   const { tokenHash: _tokenHash, ...rest } = payment;
   return { ...rest, transactionRequest: { from: payment.walletAddress, to: payment.recipient, value: '0x' + BigInt(payment.value).toString(16), data: '0x', chainId: '0x' + ARC_CHAIN_ID.toString(16) } };
 }
-export function createPayment(input: { walletAddress: string; recipient: string; amount: string; memo?: string }) {
+export function createPayment(input: { walletAddress: string; recipient: string; amount: string; recipientHandle?: string; memo?: string }) {
   if (!validAddress(input.walletAddress) || !validAddress(input.recipient)) throw new Error('Invalid wallet or recipient.');
   const value = parseUsdc(input.amount).toString();
   const token = randomBytes(32).toString('hex');
   const id = randomUUID();
   const payment: Payment = {
     id, tokenHash: hash(token).toString('hex'), walletAddress: input.walletAddress.toLowerCase(), recipient: input.recipient.toLowerCase(), amount: input.amount,
+    recipientHandle: input.recipientHandle?.toLowerCase(),
     value, memo: input.memo ?? '', chainId: ARC_CHAIN_ID, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 15 * 60000).toISOString(), status: 'awaiting_approval'
   };
   payments[id] = payment; save();
   const url = new URL(env.APP_BASE_URL); url.searchParams.set('payment', id); url.hash = token;
   return { payment: publicPayment(payment), accessToken: token, reviewUrl: url.toString() };
+}
+export function paymentsBySender(walletAddress: string) {
+  return Object.values(payments)
+    .filter((payment) => payment.walletAddress === walletAddress.toLowerCase())
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .slice(0, 100)
+    .map(({ tokenHash: _tokenHash, value: _value, ...payment }) => payment);
+}
+export function settledPaymentStats() {
+  const settled = Object.values(payments).filter((payment) => payment.status === 'completed');
+  return {
+    count: settled.length,
+    volumeUsd: settled.reduce((total, payment) => total + Number(payment.amount), 0),
+  };
 }
 export function getPayment(id: string, token: string): Payment | undefined {
   const payment = Object.hasOwn(payments, id) ? payments[id] : undefined;

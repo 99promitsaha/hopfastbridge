@@ -10,6 +10,8 @@ interface StatsData {
   swapVolumeUsd: number;
   swapCount: number;
   protocolFeeUsd: number;
+  cumulativePaymentsSettledUsd: number;
+  cumulativePaymentsSettledCount: number;
 }
 
 function formatUsd(n: number): string {
@@ -49,6 +51,8 @@ export function StatsView({ onBack }: Props) {
             payload.uniqueUsers,
             payload.swapVolumeUsd,
             payload.swapCount,
+            payload.cumulativePaymentsSettledUsd,
+            payload.cumulativePaymentsSettledCount,
           ].every(
             (value) =>
               typeof value === 'number' && Number.isFinite(value) && value >= 0
@@ -132,6 +136,13 @@ export function StatsView({ onBack }: Props) {
               <p className="hf-stat-card-free-badge">
                 Initiated through Hopfast
               </p>
+            </div>
+            <div className="hf-stat-card">
+              <p className="hf-stat-card-label">Payments settled</p>
+              <p className="hf-stat-card-value">
+                {formatUsd(data.cumulativePaymentsSettledUsd)}
+              </p>
+              <p className="hf-stat-card-sub">{data.cumulativePaymentsSettledCount.toLocaleString()} completed Hopfast ID payments · all time</p>
             </div>
           </div>
 

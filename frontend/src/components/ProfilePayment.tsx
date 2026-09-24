@@ -41,7 +41,7 @@ export function ProfilePayment({ handle, wallet, onConnect, onPayAnother }: {
     try {
       const response = await fetch(`${API_BASE_URL}/payments`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ walletAddress: wallet.address, recipient: profile.wallet, amount, memo: memo.trim() }),
+        body: JSON.stringify({ walletAddress: wallet.address, recipient: profile.wallet, recipientHandle: profile.handle, amount, memo: memo.trim() }),
       });
       const result = await response.json();
       if (!response.ok || typeof result.reviewUrl !== 'string') throw new Error(result.error ?? 'Could not prepare this payment.');

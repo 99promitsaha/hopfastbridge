@@ -21,6 +21,7 @@ import {
   PaymentProfile,
 } from "../models/ArchitectEnvelope.js";
 import { isDatabaseReady } from "../config/db.js";
+import { paymentsBySender } from "../lib/paymentStore.js";
 const router = Router();
 const PUBLIC_ARC_RPC_URL = "https://rpc.mainnet.arc.io";
 const random = () => randomBytes(32).toString("hex");
@@ -237,6 +238,7 @@ router.post("/architects/mine", async (req, res, next) => {
       .sort({ createdAt: -1 })
       .limit(100);
     res.json({
+      directPayments: paymentsBySender(wallet),
       envelopes: await Promise.all(
         records.map(async (e) => {
           const chain = await read(e.envelopeId);

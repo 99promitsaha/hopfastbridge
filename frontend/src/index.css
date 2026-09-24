@@ -3366,6 +3366,13 @@ input::placeholder {
 .hf-deposit-id { grid-column: 1 / -1; overflow: hidden; color: #8b9aaf; font: 500 7px var(--hf-mono); text-overflow: ellipsis; white-space: nowrap; }
 .hf-deposit-actions { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 7px; }
 .hf-deposit-actions button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #dce5ef; border-radius: 9px; background: #fff; color: #355f8c; font-size: 9px; font-weight: 700; }
+.hf-deposit-actions a { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #dce5ef; border-radius: 9px; background: #fff; color: #355f8c; font-size: 9px; font-weight: 700; text-decoration: none; }
+.hf-activity-kind { display: inline-flex; gap: 4px; margin-top: 18px; padding: 4px; border: 1px solid #d8e3ef; border-radius: 12px; background: #edf4fb; }
+.hf-activity-kind button { min-height: 32px; padding: 0 12px; border-radius: 9px; color: #637b97; font-size: 9px; font-weight: 700; }
+.hf-activity-kind button.active { background: #fff; color: #193760; box-shadow: 0 7px 18px #17375f12; }
+.hf-deposit-status.state-completed { background: #2b9367; box-shadow: 0 0 0 5px #2b936718; }
+.hf-deposit-status.state-submitted { background: #d69b36; box-shadow: 0 0 0 5px #d69b3618; }
+.hf-deposit-status.state-failed, .hf-deposit-status.state-cancelled, .hf-deposit-status.state-expired { background: #a9b7c7; box-shadow: 0 0 0 5px #a9b7c718; }
 .hf-deposits-empty { padding: 64px 20px; text-align: center; }
 .hf-deposits-empty-icon { display: grid; width: 52px; height: 52px; margin: 0 auto 14px; place-items: center; border-radius: 16px; background: #e8f1fa; color: #567da8; }
 .hf-deposits-empty h3 { color: var(--hf-navy); font-size: 16px; }

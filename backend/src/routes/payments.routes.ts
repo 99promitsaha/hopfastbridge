@@ -5,7 +5,7 @@ import { assertArcNetwork, arcRpc, formatUsdc, validAddress } from '../lib/arc.j
 import { createPayment, getPayment, publicPayment, refreshPayment, submitPayment, cancelPayment } from '../lib/paymentStore.js';
 const router = Router();
 const address = z.string().refine(validAddress);
-const schema = z.object({ walletAddress: address, recipient: address, amount: z.string().max(50), memo: z.string().max(180).optional() }).strict();
+const schema = z.object({ walletAddress: address, recipient: address, amount: z.string().max(50), recipientHandle: z.string().regex(/^[A-Za-z0-9_]{1,15}$/).optional(), memo: z.string().max(180).optional() }).strict();
 router.use(['/payments', '/arc/balance'], rateLimit({ windowMs: 60000, limit: 30, standardHeaders: true, legacyHeaders: false }));
 router.use('/payments', (_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
 router.post('/payments', (req, res) => {
