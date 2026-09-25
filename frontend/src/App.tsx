@@ -514,7 +514,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
           />
           <div>
             <strong>hopfast.</strong>
-            <span>USDC in. Payments out. Built on Arc.</span>
+            <span>USDC in. Payments out.</span>
           </div>
         </div>
         <div className="hf-footer-arc" aria-label="Built on Arc">

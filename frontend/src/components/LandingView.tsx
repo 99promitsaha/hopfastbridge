@@ -2,9 +2,7 @@ import {
   ArrowRight,
   AtSign,
   Clock3,
-  Code2,
   Coins,
-  FileText,
   Globe2,
   Link2,
   LockKeyhole,
@@ -13,9 +11,7 @@ import {
   SendHorizontal,
   ShieldCheck,
   UserRound,
-  Wallet2,
 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import {
   architectApi,
@@ -32,9 +28,6 @@ export function LandingView({
   const [paymentsStatus, setPaymentsStatus] = useState<
     "checking" | "live" | "offline"
   >("checking");
-  const [heroAction, setHeroAction] = useState<"Bridge to" | "Pay on">(
-    "Bridge to",
-  );
 
   useEffect(() => {
     architectApi<ArchitectConfig>("/config")
@@ -42,48 +35,22 @@ export function LandingView({
       .catch(() => setPaymentsStatus("offline"));
   }, []);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setHeroAction((current) =>
-        current === "Bridge to" ? "Pay on" : "Bridge to",
-      );
-    }, 3000);
-    return () => window.clearInterval(timer);
-  }, []);
-
   return (
     <div className="hf-home hf-home-redesign hf-product-home">
       <section className="hf-product-hero" aria-labelledby="home-title">
         <div className="hf-product-hero-copy">
-          <p className="hf-product-eyebrow">
-            {/* <span className="hf-product-live-dot" aria-hidden="true" /> */}
-            Unified Payments Interface on Arc
-          </p>
-          <h1
-            id="home-title"
-            className="hf-rotating-hero"
-            aria-label="Bridge to and pay on Arc"
-          >
-            <span className="hf-rotating-copy" aria-hidden="true">
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.span
-                  key={heroAction}
-                  initial={{ opacity: 0, y: 18, filter: "blur(5px)" }}
-                  animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                  exit={{ opacity: 0, y: -18, filter: "blur(5px)" }}
-                  transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  {heroAction}
-                </motion.span>
-              </AnimatePresence>
+          <h1 id="home-title">
+            <span className="hf-hero-bridge-line">
+              Bridge <span className="hf-hero-usdc-word">USDC.</span>
+              <span className="hf-hero-usdc-coin" aria-hidden="true">
+                <img src="/token-icons/usdc.svg" alt="" />
+              </span>
             </span>
-            <span className="hf-hero-arc">
-              <img src="/brand/arc-logo.svg" alt="" aria-hidden="true" />
-            </span>
+            <span className="hf-hero-pay-line">Pay by username.</span>
           </h1>
           <p className="hf-product-lead">
-            Compare routes, send USDC to an X username, and receive payments
-            through your own Hopfast link or QR.
+            Compare live routes into Arc. Pay a Hopfast ID directly, or send USDC
+            to an X username for them to verify and claim in their own wallet.
           </p>
           <div className="hf-product-actions">
             <button
@@ -103,19 +70,13 @@ export function LandingView({
           </div>
           <div className="hf-product-proof" aria-label="Product assurances">
             <span>
-              <Route size={14} /> Create a hopfast id
+              <Route size={14} /> Compare LI.FI and Squid
             </span>
             <span>
-              <Wallet2 size={14} /> Pay using QR or X username
+              <AtSign size={14} /> Pay a Hopfast ID or X username
             </span>
             <span>
-              <ShieldCheck size={14} /> Custody your funds
-            </span>
-            <span className="hf-proof-upcoming">
-              <FileText size={14} /> Raise &amp; request invoices <em>Soon</em>
-            </span>
-            <span className="hf-proof-upcoming">
-              <Code2 size={14} /> Open-sourced API <em>Soon</em>
+              <ShieldCheck size={14} /> Sign with your own wallet
             </span>
           </div>
         </div>
@@ -180,10 +141,45 @@ export function LandingView({
         </div>
       </section>
 
+      <section className="hf-upi-story" aria-labelledby="upi-story-title">
+        <div className="hf-upi-story-photo">
+          <img
+            src="https://images.pexels.com/photos/13326556/pexels-photo-13326556.jpeg?auto=compress&cs=tinysrgb&w=1600"
+            alt="A shopkeeper at his small stall in Maharashtra, with a payment QR stand on the counter."
+            loading="lazy"
+            decoding="async"
+          />
+          <a
+            href="https://www.pexels.com/photo/man-sitting-inside-a-store-13326556/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hf-upi-story-credit"
+          >
+            Photo: Ankit Rainloure / Pexels
+          </a>
+        </div>
+        <div className="hf-upi-story-copy">
+          <h2 id="upi-story-title">A small shop taught us what payments should feel like.</h2>
+          <p>
+            In India, a shopkeeper can put a QR code on the counter and accept a
+            payment from almost anyone. The customer doesn’t need
+            to ask for bank details. They just scan and pay.
+          </p>
+          <p>
+            We wanted that kind of ease for money moving across the internet.
+            Pay a person through their Hopfast ID, a
+            link, a QR code, or an X username. Settle in USDC.
+          </p>
+          <div className="hf-upi-story-vision">
+            <img src="/token-icons/usdc.svg" alt="" aria-hidden="true" />
+            <span>Our belief: wherever a crypto payment starts, it should be able to settle as USDC.</span>
+          </div>
+        </div>
+      </section>
+
       <section className="hf-product-duo" aria-labelledby="product-title">
         <header className="hf-product-section-heading">
           <div>
-            <p className="hf-product-eyebrow">One place to move and pay</p>
             <h2 id="product-title">
               Bridge in. Pay by username. Receive by link.
             </h2>
@@ -205,7 +201,6 @@ export function LandingView({
               </span>
             </div>
             <div>
-              <p className="hf-product-index">01 · BRIDGE</p>
               <h3>Get USDC onto Arc.</h3>
               <p>
                 Choose where your USDC starts. Hopfast compares live LI.FI and
@@ -279,7 +274,6 @@ export function LandingView({
               </span>
             </div>
             <div>
-              <p className="hf-product-index">02 · PAY</p>
               <h3>Pay the person you know.</h3>
               <p>
                 Pay a Hopfast ID directly to its verified Arc wallet. If they do
@@ -324,7 +318,6 @@ export function LandingView({
 
       <section className="hf-product-journey" aria-labelledby="journey-title">
         <header>
-          <p className="hf-product-eyebrow">Private payments by X username</p>
           <h2 id="journey-title">They do not need a wallet address ready.</h2>
           <p>
             You create the payment and share its private link. The intended X
@@ -408,7 +401,6 @@ export function LandingView({
       <section className="hf-product-control" aria-labelledby="control-title">
         <header className="hf-product-section-heading">
           <div>
-            <p className="hf-product-eyebrow">Before you approve</p>
             <h2 id="control-title">See exactly where the USDC goes.</h2>
           </div>
           <p>
@@ -465,7 +457,6 @@ export function LandingView({
         aria-labelledby="identity-title"
       >
         <div className="hf-identity-story">
-          <p className="hf-product-eyebrow">Your payment identity on Arc</p>
           <h2 id="identity-title">Give people one reliable way to pay you.</h2>
           <p>
             Verify your X username once and point your Hopfast ID, link, and QR
@@ -527,7 +518,6 @@ export function LandingView({
           <img src="/brand/arc-mark.svg" alt="" />
         </div>
         <div>
-          <p className="hf-product-eyebrow">Your next Arc payment</p>
           <h2>Move USDC onto Arc, then send it by username.</h2>
         </div>
         <div className="hf-product-final-actions">

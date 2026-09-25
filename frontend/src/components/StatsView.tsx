@@ -92,9 +92,9 @@ export function StatsView({ onBack }: Props) {
 
       <div className="hf-stats-header">
         <div className="hf-stats-header-left">
-          <p className="hf-kicker">HOPFAST ON ARC</p>
-          <h2 className="hf-stats-title">Hopfast bridge activity.</h2>
-          <p className="hf-stats-range">{PERIOD_LABELS[period]} · routes initiated through Hopfast</p>
+          <p className="hf-kicker">STATS TRACKER</p>
+          <h2 className="hf-stats-title">Hopfast activity.</h2>
+          <p className="hf-stats-range">{PERIOD_LABELS[period]} · routes initiated and value settled through Hopfast</p>
         </div>
         <div className="hf-stats-periods">
           {(['7d', '15d', '30d'] as Period[]).map((p) => (
@@ -115,12 +115,6 @@ export function StatsView({ onBack }: Props) {
       {data && !loading && (
         <>
           <div className="hf-stats-grid">
-            <div className="hf-stat-card">
-              <p className="hf-stat-card-label">Active wallets</p>
-              <p className="hf-stat-card-value">
-                {data.uniqueUsers.toLocaleString()}
-              </p>
-            </div>
             <div className="hf-stat-card">
               <p className="hf-stat-card-label">USDC value routed</p>
               <p className="hf-stat-card-value">
@@ -147,7 +141,7 @@ export function StatsView({ onBack }: Props) {
           </div>
 
           <p className="hf-stats-note">
-            These figures cover bridge activity initiated through Hopfast. They do not represent all activity on Arc.
+            *These figures cover activity initiated through Hopfast.
           </p>
         </>
       )}
