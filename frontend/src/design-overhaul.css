@@ -1730,7 +1730,7 @@ textarea:focus-visible {
 }
 .hf-payment-mode {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-top: 14px;
 }
@@ -1749,6 +1749,27 @@ textarea:focus-visible {
 .hf-payment-mode > button > span {
   display: grid;
   gap: 3px;
+}
+.hf-payment-mode > button > svg,
+.hf-payment-mode-logo {
+  width: 16px;
+  height: 16px;
+  flex: none;
+}
+.hf-payment-mode > button.hf-payment-mode-upcoming {
+  background: rgba(230, 235, 242, 0.4);
+  border-color: rgba(122, 140, 161, 0.12);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+.hf-payment-mode-upcoming strong,
+.hf-payment-mode-upcoming small {
+  color: #8996a6;
+}
+.hf-payment-mode-upcoming .hf-payment-mode-logo {
+  filter: grayscale(1);
+  opacity: 0.55;
 }
 .hf-payment-mode strong {
   color: #284d78;
@@ -2956,6 +2977,32 @@ textarea:focus-visible {
   font-size: 9px;
 }
 
+.hf-roadmap { padding-top: 62px; padding-bottom: 64px; }
+.hf-roadmap-heading { max-width: 760px; margin-bottom: 44px; }
+.hf-roadmap-heading h1 { color: #203957; font-size: clamp(34px, 4.2vw, 52px); font-weight: 650; line-height: 1.08; letter-spacing: -0.055em; }
+.hf-roadmap-heading p { max-width: 650px; margin-top: 20px; color: #60758f; font-size: 15px; line-height: 1.75; }
+.hf-roadmap-releases { display: grid; gap: 22px; margin: 0; padding: 0; list-style: none; }
+.hf-roadmap-release { position: relative; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 28px; }
+.hf-roadmap-release:not(:last-child)::before { position: absolute; top: 58px; bottom: -22px; left: 24px; width: 1px; background: rgba(84, 130, 182, 0.22); content: ""; }
+.hf-roadmap-version { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding-top: 24px; }
+.hf-roadmap-node { display: grid; width: 49px; height: 49px; place-items: center; border: 1px solid rgba(255, 255, 255, 0.9); border-radius: 16px; background: linear-gradient(145deg, #f8fcff, #dcecff); color: #3a70ad; box-shadow: 0 10px 24px -18px rgba(25, 63, 108, 0.5); }
+.hf-roadmap-version strong { margin-left: 64px; margin-top: -48px; white-space: nowrap; color: #284d78; font-size: 12px; font-weight: 700; }
+.hf-roadmap-status { margin-left: 64px; color: #748ba7; font-size: 10px; }
+.hf-roadmap-card { padding: 32px 36px; border: 1px solid rgba(255, 255, 255, 0.9); border-radius: 26px; background: linear-gradient(135deg, rgba(255, 255, 255, 0.8), rgba(224, 238, 254, 0.64)); box-shadow: 0 22px 48px -40px rgba(29, 68, 112, 0.45), inset 0 1px rgba(255, 255, 255, 0.9); }
+.hf-roadmap-card h2 { color: #203957; font-size: clamp(24px, 2.6vw, 32px); font-weight: 600; line-height: 1.18; letter-spacing: -0.04em; }
+.hf-roadmap-card > p { max-width: 740px; margin-top: 16px; color: #5c718b; font-size: 13px; line-height: 1.8; }
+.hf-roadmap-card ul { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 0; padding: 0; list-style: none; }
+.hf-roadmap-card li { padding: 7px 10px; border: 1px solid rgba(90, 136, 188, 0.13); border-radius: 10px; background: rgba(255, 255, 255, 0.5); color: #46688f; font-size: 10px; line-height: 1.5; }
+.hf-roadmap-note { max-width: 710px; margin: 26px 0 0 238px; color: #74869b; font-size: 11px; line-height: 1.7; }
+@media (max-width: 760px) {
+  .hf-roadmap { padding-top: 32px; }
+  .hf-roadmap-release { grid-template-columns: 1fr; gap: 12px; }
+  .hf-roadmap-release:not(:last-child)::before { display: none; }
+  .hf-roadmap-version { min-height: 65px; padding-top: 8px; }
+  .hf-roadmap-card { padding: 26px 22px; border-radius: 22px; }
+  .hf-roadmap-note { margin-left: 0; }
+}
+
 /* Footer */
 .hf-footer {
   width: min(1180px, calc(100% - 40px));
@@ -3013,6 +3060,15 @@ textarea:focus-visible {
 .hf-footer-links {
   margin-left: auto;
   font-size: 9px;
+}
+.hf-footer-links > button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.hf-footer-links > button[aria-current="page"] {
+  color: #244f83;
+  font-weight: 700;
 }
 .hf-footer-links a,
 .hf-footer-links button {

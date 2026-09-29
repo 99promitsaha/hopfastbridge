@@ -176,7 +176,8 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
         <>
         <div className="hf-payment-mode" role="group" aria-label="Payment type">
           <button type="button" className={paymentMode === 'direct' ? 'active' : ''} onClick={() => setPaymentMode('direct')}><AtSign size={14} /><span><strong>Pay a Hopfast ID</strong><small>Direct to their verified Arc wallet</small></span></button>
-          <button type="button" className={paymentMode === 'private' ? 'active' : ''} onClick={() => setPaymentMode('private')}><Send size={14} /><span><strong>Pay an X username</strong><small>They verify and claim later</small></span></button>
+          <button type="button" className={paymentMode === 'private' ? 'active' : ''} onClick={() => setPaymentMode('private')}><img className="hf-payment-mode-logo" src="/brand/x.svg" alt="" /><span><strong>Pay an X username</strong><small>They verify and claim later</small></span></button>
+          <button type="button" className="hf-payment-mode-upcoming" disabled><img className="hf-payment-mode-logo" src="/brand/telegram.svg" alt="" /><span><strong>Pay a Telegram contact</strong><small>Coming soon</small></span></button>
         </div>
         {paymentMode === 'direct' ? (
           <div className="hf-direct-pay-start">

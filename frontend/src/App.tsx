@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
   ArrowLeftRight,
   BarChart3,
+  CircleHelp,
   WalletCards,
   X,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import { ArchitectDeployment } from "./components/ArchitectDeployment";
 import { LandingView } from "./components/LandingView";
 import { SwapView } from "./components/SwapView";
 import { StatsView } from "./components/StatsView";
+import { RoadmapView } from "./components/RoadmapView";
 import { TransactionHistoryModal } from "./components/TransactionHistoryModal";
 import { CHAIN_BY_KEY } from "./lib/chains";
 import { usePrices } from "./hooks/usePrices";
@@ -288,12 +290,17 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             <span>Pay on Arc</span>
           </button>
           <button
-            className={view === "stats" ? "active" : ""}
-            aria-current={view === "stats" ? "page" : undefined}
-            onClick={() => setView("stats")}
+            className={view === "roadmap" ? "active" : ""}
+            aria-current={view === "roadmap" ? "page" : undefined}
+            onClick={() => {
+              setSupportOpen(false);
+              closeSwap();
+              setView("roadmap");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
           >
-            <BarChart3 size={15} />
-            <span>Stats</span>
+            <CircleHelp size={15} />
+            <span>Up next?</span>
           </button>
         </nav>
         {HAS_PRIVY ? (
@@ -323,6 +330,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
         )}
 
         {view === "stats" && <StatsView onBack={() => setView("human")} />}
+        {view === "roadmap" && <RoadmapView />}
 
         {view === "human" && (
           <motion.main
@@ -522,6 +530,18 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
           <img src="/brand/arc-logo.svg" alt="Arc" />
         </div>
         <div className="hf-footer-links">
+          <button
+            type="button"
+            aria-current={view === "stats" ? "page" : undefined}
+            onClick={() => {
+              setSupportOpen(false);
+              closeSwap();
+              setView("stats");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          >
+            <BarChart3 size={12} /> Stats
+          </button>
           <a
             href="https://t.me/promitsaha"
             target="_blank"
