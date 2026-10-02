@@ -2,7 +2,6 @@ import type { ChainKey } from './lib/chains';
 import type { ProviderKey, SwapDraft, TxStage } from './types';
 
 export const HAS_PRIVY = Boolean(import.meta.env.VITE_PRIVY_APP_ID);
-export const IS_PROD = import.meta.env.PROD;
 
 export const DEFAULT_DRAFT: SwapDraft = {
   fromChain: 'base',

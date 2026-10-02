@@ -1,10 +1,29 @@
 # Hopfast
 
-**Unified payments on Arc.**
+**Bridge USDC. Pay by username.**
 
-[Hopfast](https://hopfast.xyz) brings bridging, direct payments, payment identities, and private claims into one focused Arc application. Move USDC to Arc, pay a verified Hopfast ID, or create a payment for an X username before you know their wallet address.
+[Hopfast](https://hopfast.xyz) is a USDC payments app on Arc. Compare bridge routes into Arc, send USDC directly to a verified Hopfast ID, or pay an X username without asking for a wallet address first. Receive payments through your own ID, link, and QR code.
 
-The application keeps wallet control with the user. Hopfast prepares and verifies transactions, but every transfer, bridge, approval, deposit, claim, and recovery is signed by the wallet that performs it.
+Built around a familiar idea from India's UPI: paying someone should start with knowing who they are. Hopfast brings that idea to crypto, with USDC settlement on Arc and transactions signed in your own wallet.
+
+[Open the app](https://hopfast.xyz) · [Explore the code](#architecture) · [Run locally](#local-development) · [Telegram implementation plan](docs/telegram-payments.md)
+
+## Try it
+
+- **Bring funds to Arc:** connect your wallet, choose a supported source asset, compare available routes, and bridge.
+- **Pay someone you know:** enter their Hopfast ID to confirm their linked wallet, or use their X username to create a private claim link.
+- **Get paid:** verify your X account and wallet, then share your Hopfast ID, payment link, or QR code.
+- **Follow a payment:** open Activity for direct transfers and X username payments, including their onchain transaction links.
+
+For X username payments, you share the claim link yourself. The recipient signs in with the intended X account and claims the USDC to their own wallet. Hopfast does not send messages from your social account.
+
+## Why we are building it
+
+Crypto payments still ask the recipient to explain addresses, tokens, and networks before money can move. Hopfast brings the bridge and the payment into the same app: bring USDC to Arc, identify the person, and pay.
+
+The longer-term goal is to let people collect USDC regardless of the supported asset or network the payer starts with. Freelancer invoices, merchant checkout, and an open-source integration API are planned extensions of that payment flow; they are not live features today. Telegram payments are also planned and currently shown as Coming soon.
+
+Users sign their own transfers, bridges, approvals, deposits, and claims. Direct Hopfast ID payments go wallet to wallet; X username payments use an escrow with a backend identity-verification signer. The [escrow trust boundary](#how-the-escrow-protects-payments) is explained below.
 
 ## What Hopfast offers
 
@@ -67,14 +86,14 @@ Hopfast does not send automated DMs and does not retain X access tokens. If the 
 - Envelope state prevents duplicate claims and duplicate deposits.
 - Reentrancy protection and safe token transfers protect state transitions.
 - Fee-on-transfer and otherwise incompatible tokens are rejected by exact balance accounting.
-- Active escrow cannot be withdrawn through the token rescue function.
+- The token rescue function cannot withdraw the accounted active escrow balance.
 - The original funder alone can reclaim an unclaimed payment after 30 days.
 - Administrative recovery applies only after expiry, adds a seven-day delay, and remains cancellable by a funder reclaim.
 - Contract ownership uses a two-step transfer and cannot be renounced accidentally.
 
-The escrow has a trusted authorization signer. The owner can rotate that signer and pause deposits and claims. A compromised signer or malicious owner could authorize an incorrect active claim, so production keys should be separated, protected, and operated through appropriate custody controls. This is a disclosed trust boundary rather than a claim of fully trustless identity verification.
+The escrow has a trusted authorization signer. The owner can rotate that signer and pause deposits and claims. A compromised signer or malicious owner could authorize an incorrect active claim, so production keys should be separated and protected. Administrative recovery can redirect an expired payment after its public delay. These are explicit trust boundaries: wallet signatures do not make social-identity verification fully trustless. This README describes protections in the implementation, not a claim of an independent security audit.
 
-## Fees
+## Transaction costs
 
 - **Private X username payment:** 2.5% is deducted from the deposited amount and sent to the configured treasury when the deposit is made. The remaining 97.5% is available to claim or reclaim. The fee is not charged again during claiming.
 - **Direct Hopfast ID payment:** Hopfast does not add a platform fee. Arc network cost still applies.
@@ -179,7 +198,7 @@ cd frontend
 npm run dev
 ```
 
-The default frontend is `http://localhost:5173`; the API is `http://localhost:8080/api`.
+The default frontend is `http://localhost:5173`; the API is `http://localhost:8080/api`. Keep the browser hostname consistent with your allowed origins and OAuth return configuration; `localhost` and `127.0.0.1` are different origins.
 
 ## Contracts
 
@@ -211,6 +230,8 @@ Production origins must agree across:
 - Privy's allowed domains;
 - the X application's registered callback URL.
 
+For the public deployment, set `APP_BASE_URL=https://hopfast.xyz` so generated links and QR codes always use the production domain. Allow both `https://hopfast.xyz` and `https://www.hopfast.xyz` in `CORS_ORIGIN` and Privy. The X callback must point to the backend callback endpoint, rather than a frontend page. Browser API requests use `VITE_HOPFAST_API_BASE_URL`; these values serve different purposes.
+
 Keep the backend on a single process while it uses the JSON payment store. Move that store to a transactional database before horizontal scaling. Place the API behind platform-level request filtering in addition to the application rate limits.
 
 ## Security and privacy
@@ -231,6 +252,7 @@ Do not commit real credentials even temporarily. Removing a secret from a later 
 - Bridge statistics represent activity recorded through Hopfast, not all activity on Arc.
 - Direct payment records currently use a single-process persistent store.
 - Identity claims depend on X OAuth availability and the backend authorization signer.
+- Profile and private-payment metadata survive process restarts through MongoDB. Direct-payment records require the persistent disk described above; a redeploy without that disk is not equivalent to a restart.
 - USDC or network-level restrictions cannot be bypassed by the application or escrow.
 
 ## Repository hygiene

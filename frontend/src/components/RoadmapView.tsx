@@ -6,35 +6,30 @@ const releases = [
     icon: Code2,
     title: "USDC payments, built into your product.",
     description: "We want developers to use Hopfast without having to build a payment backend from scratch. An open-source API will let them create payment requests, collect USDC on Arc, and track when a payment settles from their own app.",
-    details: ["Open-source payment backend", "Payment requests and settlement updates", "Documentation and integration examples"],
   },
   {
     version: "1.0.2",
     icon: FileText,
     title: "Work globally. Get paid in USDC.",
     description: "A freelancer should be able to send an invoice to a client anywhere and receive USDC. We’re planning invoices with a shareable payment link, a clear payment status, and a receipt when the work is paid for. The client’s starting token or chain should become less of a concern for the person getting paid.",
-    details: ["Create and share invoices", "Track outstanding and paid invoices", "Receipts for settled payments"],
   },
   {
     version: "1.0.3",
     icon: Store,
     title: "A payment counter for every merchant.",
     description: "We want small businesses to accept crypto payments without explaining wallets and networks to every customer. A merchant will be able to share a checkout link or display a QR code, while collecting USDC on Arc and keeping a record of each sale.",
-    details: ["Merchant onboarding", "Checkout links and payment QR codes", "USDC settlement and sales history"],
   },
   {
     version: "2.0.0",
     icon: ScanLine,
     title: "Make paying feel familiar.",
     description: "The next interface will bring sending, receiving, scanning, and payment history closer together. We want fewer steps between knowing who to pay and completing the payment, especially on a phone. Telegram contacts are also in the plan, alongside the X usernames and Hopfast IDs we support today.",
-    details: ["A simpler experience on mobile", "Contacts, QR scanning, and payment history", "Payments to Telegram contacts"],
   },
   {
     version: "2.0.1",
     icon: Sparkles,
     title: "Recognise the people using Hopfast.",
     description: "We’re planning a points programme for people who make Hopfast part of how they pay and receive money. It should recognise real use and helpful referrals, with progress visible in the app. The rules and what points can be used for will be shared before it launches.",
-    details: ["Points for eligible activity", "Referral recognition", "Clear rules and progress tracking"],
   },
 ];
 
@@ -46,7 +41,7 @@ export function RoadmapView() {
         <p>Paying a person is the start. Next, we want to make USDC useful for the work you do, the products you build, and the business you run.</p>
       </header>
       <ol className="hf-roadmap-releases">
-        {releases.map(({ version, icon: Icon, title, description, details }, index) => (
+        {releases.map(({ version, icon: Icon, title, description }, index) => (
           <li className="hf-roadmap-release" key={version}>
             <div className="hf-roadmap-version">
               <span className="hf-roadmap-node"><Icon size={22} aria-hidden="true" /></span>
@@ -56,7 +51,6 @@ export function RoadmapView() {
             <article className="hf-roadmap-card">
               <h2>{title}</h2>
               <p>{description}</p>
-              <ul>{details.map((detail) => <li key={detail}>{detail}</li>)}</ul>
             </article>
           </li>
         ))}

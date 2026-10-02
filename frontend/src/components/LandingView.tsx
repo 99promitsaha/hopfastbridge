@@ -324,78 +324,12 @@ export function LandingView({
             account must verify before claiming.
           </p>
         </header>
-        <div
-          className="hf-journey-terminal"
-          role="img"
-          aria-label="Payment flow: address, fund, share, claim"
-        >
-          <div className="hf-journey-terminal-bar" aria-hidden="true">
-            <span className="hf-jt-dot hf-jt-dot--red" />
-            <span className="hf-jt-dot hf-jt-dot--yellow" />
-            <span className="hf-jt-dot hf-jt-dot--green" />
-            <span className="hf-jt-title">hopfast MCP (coming soon)</span>
-          </div>
-          <div className="hf-journey-terminal-body" aria-hidden="true">
-            <div className="hf-jt-block">
-              <p className="hf-jt-line">
-                <span className="hf-jt-prompt">$</span>
-                <span className="hf-jt-cmd">hopfast pay</span>
-                <span className="hf-jt-flag">--to</span>
-                <span className="hf-jt-val">@username</span>
-                <span className="hf-jt-flag">--amount</span>
-                <span className="hf-jt-val">100 USDC</span>
-              </p>
-              <p className="hf-jt-output">
-                <span className="hf-jt-step">01 ADDRESS</span> Recipient set to
-                @username · amount 100 USDC
-              </p>
-            </div>
-            <div className="hf-jt-block">
-              <p className="hf-jt-line">
-                <span className="hf-jt-prompt">$</span>
-                <span className="hf-jt-cmd">hopfast fund</span>
-                <span className="hf-jt-flag">--wallet</span>
-                <span className="hf-jt-val">0xd4f…3a9</span>
-              </p>
-              <p className="hf-jt-output">
-                <span className="hf-jt-step">02 FUND</span> Wallet signed · USDC
-                deposited into Arc contract
-              </p>
-              <p className="hf-jt-output hf-jt-output--dim">
-                {" "}
-                ✓ tx 0x7f2a…c310 confirmed in 2 blocks
-              </p>
-            </div>
-            <div className="hf-jt-block">
-              <p className="hf-jt-line">
-                <span className="hf-jt-prompt">$</span>
-                <span className="hf-jt-cmd">hopfast share</span>
-                <span className="hf-jt-flag">--copy-link</span>
-              </p>
-              <p className="hf-jt-output">
-                <span className="hf-jt-step">03 SHARE</span> Private claim link
-                copied to clipboard
-              </p>
-              <p className="hf-jt-output hf-jt-output--dim">
-                {" "}
-                → hopfast.xyz/claim/prv_6Xk2…mN9q
-              </p>
-            </div>
-            <div className="hf-jt-block">
-              <p className="hf-jt-line">
-                <span className="hf-jt-prompt">$</span>
-                <span className="hf-jt-cmd">hopfast status</span>
-                <span className="hf-jt-flag">--payment</span>
-                <span className="hf-jt-val">prv_6Xk2…mN9q</span>
-              </p>
-              <p className="hf-jt-output">
-                <span className="hf-jt-step hf-jt-step--done">04 CLAIMED</span>{" "}
-                @username verified X account · 100 USDC received
-              </p>
-              <p className="hf-jt-cursor">█</p>
-            </div>
-          </div>
-        </div>
+        <ol className="hf-payment-journey">
+          <li><AtSign size={22} aria-hidden="true" /><h3>Choose the person</h3><p>Enter their X username and confirm who the payment is for.</p></li>
+          <li><Coins size={22} aria-hidden="true" /><h3>Fund the payment</h3><p>Review the amount in your wallet. USDC stays in escrow until they claim.</p></li>
+          <li><Link2 size={22} aria-hidden="true" /><h3>Share the private link</h3><p>Send it in your own conversation. Hopfast does not message them for you.</p></li>
+          <li><ShieldCheck size={22} aria-hidden="true" /><h3>They verify and claim</h3><p>They sign in with the intended X account and claim to their own Arc wallet.</p></li>
+        </ol>
       </section>
 
       <section className="hf-product-control" aria-labelledby="control-title">

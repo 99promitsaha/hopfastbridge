@@ -1,4 +1,4 @@
-import { CHAINS, CHAIN_BY_KEY, getDefaultToken, getToken, type ChainKey } from './chains';
+import { CHAIN_BY_KEY, getDefaultToken, getToken, type ChainKey } from './chains';
 import type { SwapDraft } from '../types';
 
 export function makeBalanceKey(chain: ChainKey, tokenAddress: string): string {
@@ -8,12 +8,6 @@ export function makeBalanceKey(chain: ChainKey, tokenAddress: string): string {
 export function toProviderLabel(provider?: string): string {
   if (!provider) return 'Unknown';
   return provider.replace(/-api$/i, '').replace(/^./, (char) => char.toUpperCase());
-}
-
-export function getAnotherChain(chain: ChainKey): ChainKey {
-  const allKeys = CHAINS.map((c) => c.key);
-  const idx = allKeys.indexOf(chain);
-  return allKeys[(idx + 1) % allKeys.length];
 }
 
 export function getDifferentToken(chain: ChainKey, excludeSymbol: string): string {
