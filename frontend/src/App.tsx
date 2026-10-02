@@ -55,6 +55,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
+  const [supportInitialTab, setSupportInitialTab] = useState<'send' | 'invoices'>('send');
   const [supportOpen, setSupportOpen] = useState(
     () =>
       new URLSearchParams(window.location.search).has("envelope") ||
@@ -352,7 +353,8 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
                   setSwapOpen(true);
                 }
               }}
-              onPayAnyone={() => setSupportOpen(true)}
+              onPayAnyone={() => { setSupportInitialTab('send'); setSupportOpen(true); }}
+              onInvoices={() => { setSupportInitialTab('invoices'); setSupportOpen(true); }}
             />
           </motion.main>
         )}
@@ -410,6 +412,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
           ariaLabel="Unified Payments on Arc"
           onClose={() => {
             setSupportOpen(false);
+            setSupportInitialTab('send');
             setView("human");
             if (
               ["envelope", "pay", "payProfile", "claimError", "invoice"].some((key) =>
@@ -426,6 +429,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
               setSwapOpen(true);
             }}
             initialHandle={envelopeHandle}
+            initialTab={supportInitialTab}
             wallet={walletBridge}
             onConnect={HAS_PRIVY ? privyAuth.connectWallet : undefined}
           />

@@ -1,3 +1,4 @@
+import { InvoiceLandingSection } from './InvoiceLandingSection';
 import {
   ArrowRight,
   AtSign,
@@ -21,9 +22,11 @@ import {
 export function LandingView({
   onBridge,
   onPayAnyone,
+  onInvoices,
 }: {
   onBridge: () => void;
   onPayAnyone: () => void;
+  onInvoices: () => void;
 }) {
   const [paymentsStatus, setPaymentsStatus] = useState<
     "checking" | "live" | "offline"
@@ -315,6 +318,8 @@ export function LandingView({
           </article>
         </div>
       </section>
+
+      <InvoiceLandingSection onCreate={onInvoices} />
 
       <section className="hf-product-journey" aria-labelledby="journey-title">
         <header>

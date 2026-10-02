@@ -3441,3 +3441,52 @@ textarea:focus-visible {
 @media(prefers-reduced-motion:reduce) { .hf-loading-spinner,.hf-loading-skeleton > span,.hf-spin { animation:none !important; } }
 
 .hf-payment-panel[hidden] { display:none !important; }
+
+.hf-invoice-launch { position:relative; overflow:visible; }
+.hf-invoice-symbol-art { width:92px; height:92px; border-radius:27px; background:linear-gradient(145deg,#fffdf8,#ffe8d2); box-shadow:inset 0 1px 0 #fff,0 12px 24px -18px #be622a66; }
+.hf-invoice-symbol-art > svg { width:86px; height:86px; overflow:visible; }
+.hf-invoice-launch-group { margin-left:auto; display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0; }
+.hf-invoice-launch-group > small { font-size:10px; line-height:1.3; color:var(--hf-text-secondary); }
+.hf-invoice-new { position:absolute; top:-8px; right:-7px; padding:3px 7px; border:1px solid #fff; border-radius:8px; background:#fff2df; color:#a44415; font-size:10px; font-weight:750; line-height:1.3; box-shadow:0 3px 8px #87431c1a; pointer-events:none; }
+
+/* A sample invoice introduces the live freelancer workflow. */
+.hf-freelancer { margin:36px 0 48px; }
+.hf-freelancer-main { display:grid; grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr); align-items:center; gap:48px; padding:48px; border:1px solid #ffffffef; border-radius:32px; background:linear-gradient(125deg,#ffffffc9,#e4efffc9); box-shadow:0 24px 60px -40px #2a527f45,inset 0 1px 0 #fff; }
+.hf-freelancer-copy { min-width:0; }
+.hf-freelancer-copy h2 { margin:0 0 20px; font-family:var(--hf-font-heading); font-size:clamp(30px,3.1vw,46px); font-weight:500; letter-spacing:-.05em; line-height:1.15; }
+.hf-freelancer-copy h2 span { color:#4779b5; }
+.hf-freelancer-copy > p { max-width:470px; margin:0 0 26px; font-size:15px; line-height:1.85; color:var(--hf-text-secondary); }
+.hf-freelancer-copy > button { min-height:48px; cursor:pointer; }
+.hf-freelancer-saved { display:flex; align-items:flex-start; gap:13px; margin-top:30px; padding:18px; border:1px solid #ffffffd9; border-radius:18px; background:#ffffff70; }
+.hf-freelancer-saved > svg { flex-shrink:0; margin-top:3px; color:#527bab; }
+.hf-freelancer-saved p { margin:0; font-size:13px; line-height:1.75; color:var(--hf-text-secondary); }
+.hf-freelancer-saved strong { display:block; margin-bottom:5px; color:var(--hf-text-primary); font-weight:600; }
+.hf-freelancer-art { position:relative; width:100%; max-width:470px; min-width:0; padding:16px 26px 76px; justify-self:center; }
+.hf-freelancer-document { position:relative; transform:rotate(-3deg); border:1px solid #fff; border-radius:24px; padding:26px; background:linear-gradient(150deg,#fff,#f8fbffe8); box-shadow:0 25px 50px -25px #244b7a42; }
+.hf-freelancer-document-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:22px; color:#d16b28; }
+.hf-freelancer-document-top > img { width:30px; height:30px; }
+.hf-freelancer-document h3 { margin:0 0 6px; font-size:22px; font-weight:600; letter-spacing:-.035em; }
+.hf-freelancer-document > p { margin:0; font-size:12px; color:#6483a8; }
+.hf-freelancer-client { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:25px 0 16px; }
+.hf-freelancer-client > span { font-size:11px; color:#7d94af; }
+.hf-freelancer-client strong { display:block; margin-top:6px; color:#294569; font-size:13px; font-weight:600; }
+.hf-freelancer-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 0; border-bottom:1px solid #e0eaf5; font-size:12px; color:#4f6b8e; }
+.hf-freelancer-total { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:20px 0; font-size:16px; }
+.hf-freelancer-total > strong { font-size:24px; font-weight:650; letter-spacing:-.03em; }
+.hf-freelancer-link { display:flex; align-items:center; gap:8px; padding:12px; border-radius:12px; background:#edf4fc; color:#597caa; font-size:11px; }
+.hf-freelancer-link > svg { flex-shrink:0; }
+.hf-freelancer-receipt { position:absolute; bottom:35px; right:0; display:flex; align-items:center; gap:12px; width:calc(100% - 32px); padding:17px; border:1px solid #fff; border-radius:18px; background:#ffffffeb; box-shadow:0 18px 36px -20px #31598450; }
+.hf-freelancer-check { display:grid; place-items:center; width:35px; height:35px; flex-shrink:0; border-radius:50%; background:#e4f4ef; color:#308269; }
+.hf-freelancer-receipt > div { min-width:0; flex:1; }
+.hf-freelancer-receipt strong { display:block; font-size:13px; font-weight:600; }
+.hf-freelancer-receipt > div > span { display:block; margin-top:5px; font-size:11px; color:#6b85a5; }
+.hf-freelancer-receipt > img { width:27px; height:27px; flex-shrink:0; }
+.hf-freelancer-example { position:absolute; bottom:7px; right:12px; font-size:10px; color:#7b94af; }
+.hf-freelancer-steps { list-style:none; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; padding:0; margin:16px 0 0; }
+.hf-freelancer-steps > li { display:flex; align-items:flex-start; gap:13px; padding:24px; border:1px solid #ffffffed; border-radius:24px; background:linear-gradient(145deg,#ffffffae,#eaf3ff99); box-shadow:inset 0 1px 0 #fff; }
+.hf-freelancer-step-number { display:grid; place-items:center; width:28px; height:28px; flex-shrink:0; border-radius:9px; background:#fbe8d9; color:#b85b24; font-size:12px; font-weight:700; }
+.hf-freelancer-steps h3 { margin:3px 0 10px; font-size:16px; line-height:1.35; font-weight:600; letter-spacing:-.02em; }
+.hf-freelancer-steps p { margin:0; color:var(--hf-text-secondary); font-size:13px; line-height:1.8; }
+@media(max-width:1000px) { .hf-freelancer-main { gap:26px; padding:32px; }.hf-freelancer-steps > li { padding:20px; gap:10px; } }
+@media(max-width:760px) { .hf-freelancer-main { grid-template-columns:1fr; }.hf-freelancer-copy > p { max-width:none; }.hf-freelancer-art { margin-top:10px; }.hf-freelancer-steps { grid-template-columns:1fr; }.hf-freelancer-steps > li { padding:22px; }.hf-freelancer-steps h3 { margin-bottom:7px; } }
+@media(max-width:480px) { .hf-freelancer { margin:24px 0 32px; }.hf-freelancer-main { padding:24px 20px; border-radius:26px; gap:18px; }.hf-freelancer-copy h2 { font-size:32px; }.hf-freelancer-art { padding:10px 0 0; }.hf-freelancer-document { transform:none; padding:20px; }.hf-freelancer-receipt { position:relative; bottom:auto; right:auto; width:100%; margin-top:12px; padding:14px; }.hf-freelancer-example { position:static; display:block; text-align:right; margin-top:10px; }.hf-freelancer-item { font-size:11px; } }

@@ -27,13 +27,13 @@ function paymentHandleFromQr(value: string) {
   return /^[A-Za-z0-9_]{1,15}$/.test(handle) ? handle : '';
 }
 
-export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect }: {
-  onBack: () => void; initialHandle?: string; wallet?: PrivyWalletBridge | null; onConnect?: () => void;
+export function AgentView({ onBack, initialHandle = '', initialTab = 'send', wallet = null, onConnect }: {
+  onBack: () => void; initialHandle?: string; initialTab?: 'send' | 'invoices'; wallet?: PrivyWalletBridge | null; onConnect?: () => void;
 }) {
   const isClaim = new URLSearchParams(location.search).has('envelope');
   const claimError = new URLSearchParams(location.search).has('claimError');
   const [tab, setTab] = useState<'send' | 'receive' | 'mine' | 'invoices'>(() =>
-    new URLSearchParams(location.search).has('invoice') ? 'invoices' : new URLSearchParams(location.search).has('payProfile') ? 'receive' : 'send'
+    new URLSearchParams(location.search).has('invoice') ? 'invoices' : new URLSearchParams(location.search).has('payProfile') ? 'receive' : initialTab
   );
   const [paymentMode, setPaymentMode] = useState<'direct' | 'private'>('direct');
   const [directHandle, setDirectHandle] = useState('');
@@ -168,7 +168,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
         <button className={tab === 'send' ? 'active' : ''} onClick={() => setTab('send')} role="tab" aria-selected={tab === 'send'}><img className="hf-tab-usdc" src="/token-icons/usdc.svg" alt="" /> New payment</button>
         <button className={tab === 'receive' ? 'active' : ''} onClick={() => setTab('receive')} role="tab" aria-selected={tab === 'receive'}><QrCode size={15} /> Receive</button>
         <button className={tab === 'mine' ? 'active' : ''} onClick={() => setTab('mine')} role="tab" aria-selected={tab === 'mine'}><WalletCards size={15} /> Activity</button>
-      </div><button type="button" className="hf-invoice-launch" aria-pressed={tab === 'invoices'} onClick={() => setTab('invoices')}><FileText size={16} /> Invoices</button></div>
+      </div><div className="hf-invoice-launch-group"><button type="button" className="hf-invoice-launch" aria-pressed={tab === 'invoices'} onClick={() => setTab('invoices')}><FileText size={16} /> Invoices<span className="hf-invoice-new">New</span></button><small>*for freelancers.</small></div></div>
       <div className="hf-payment-panel" hidden={tab !== 'invoices'}><InvoiceWorkspace wallet={wallet} onConnect={onConnect} /></div>
       <div className="hf-payment-panel" hidden={tab !== 'mine'}><ArchitectDeposits key={wallet?.address.toLowerCase() || 'disconnected'} config={config} wallet={wallet} /></div>
       <div className="hf-payment-panel" hidden={tab !== 'receive'}><PaymentIdentity wallet={wallet} onConnect={onConnect} /></div>
