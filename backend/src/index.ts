@@ -25,7 +25,7 @@ app.use(
 );
 app.use(helmet());
 app.use(compression({ threshold: 1024 }));
-app.use(morgan('dev', {skip: req => req.path.startsWith('/api/architects')}));
+app.use(morgan('dev', {skip: req => req.path.startsWith('/api/architects') || req.path.startsWith('/api/invoices')}));
 app.use(rateLimit({
   windowMs: 60_000,
   limit: 180,

@@ -6,7 +6,7 @@
 
 Built around a familiar idea from India's UPI: paying someone should start with knowing who they are. Hopfast brings that idea to crypto, with USDC settlement on Arc and transactions signed in your own wallet.
 
-[Open the app](https://hopfast.xyz) · [Explore the code](#architecture) · [Run locally](#local-development) · [Telegram implementation plan](docs/telegram-payments.md)
+[Open the app](https://hopfast.xyz) · [Explore the code](#architecture) · [Run locally](#local-development)
 
 ## Try it
 
@@ -21,7 +21,7 @@ For X username payments, you share the claim link yourself. The recipient signs 
 
 Crypto payments still ask the recipient to explain addresses, tokens, and networks before money can move. Hopfast brings the bridge and the payment into the same app: bring USDC to Arc, identify the person, and pay.
 
-The longer-term goal is to let people collect USDC regardless of the supported asset or network the payer starts with. Freelancer invoices, merchant checkout, and an open-source integration API are planned extensions of that payment flow; they are not live features today. Telegram payments are also planned and currently shown as Coming soon.
+The longer-term goal is to let people collect USDC regardless of the supported asset or network the payer starts with. Freelancer invoices are implemented in this branch and await their separate escrow deployment. Merchant checkout, an open-source integration API, and Telegram payments remain planned extensions.
 
 Users sign their own transfers, bridges, approvals, deposits, and claims. Direct Hopfast ID payments go wallet to wallet; X username payments use an escrow with a backend identity-verification signer. The [escrow trust boundary](#how-the-escrow-protects-payments) is explained below.
 
@@ -33,6 +33,7 @@ Users sign their own transfers, bridges, approvals, deposits, and claims. Direct
 | Hopfast ID | Connects a verified X identity to an Arc wallet, personal payment link, and QR code | Direct wallet-to-wallet USDC transfer on Arc |
 | Pay an X username | Creates a private payment for a specific X account without requiring its wallet address first | Funds remain in the Hopfast escrow until the matching X account claims them |
 | Payment activity | Separates direct Hopfast ID transfers from private X username payments | Status and explorer links remain available after signing |
+| Freelancer invoices | Saves billing details and reusable clients, itemized drafts, shareable invoice links and QR codes | Separate USDC escrow; checkout remains unavailable until configured |
 | Public stats | Shows routed bridge volume and cumulative completed Hopfast ID payments | Derived from recorded application activity |
 
 ## Product flows
@@ -76,6 +77,14 @@ Private X username payments are useful when the sender knows the recipient's soc
 
 Hopfast does not send automated DMs and does not retain X access tokens. If the payment is not claimed within 30 days, the original sender can reclaim the remaining escrowed amount.
 
+### Invoice a client
+
+Open **Invoices** beside the payment tabs. Sign a wallet challenge to access your private workspace, save your billing details and clients, and create an itemized draft. Review its calculated total before publishing. Publishing requires a verified Hopfast ID and locks the invoice details, amount, and receiving wallet.
+
+The shareable link and QR open that specific invoice, including its breakdown and payment review. A client pays into a separate invoice escrow. The invoicer releases the funded invoice to their wallet; the configured treasury receives the deducted platform cut in that same transaction. Drafts remain editable; published invoices are immutable. Cancellation stops new payment authorizations and waits for existing short-lived authorizations to expire.
+
+Billing details shown on a published invoice are visible to anyone with its link. The saved client book stays private. Invoice records and business profiles live in MongoDB and survive an application restart as long as the database is retained. Onchain records are authoritative for funding, release and recovery.
+
 ## How the escrow protects payments
 
 `ArchitectEscrow.sol` is an EIP-712 authorized USDC escrow for private X username payments.
@@ -92,6 +101,14 @@ Hopfast does not send automated DMs and does not retain X access tokens. If the 
 - Contract ownership uses a two-step transfer and cannot be renounced accidentally.
 
 The escrow has a trusted authorization signer. The owner can rotate that signer and pause deposits and claims. A compromised signer or malicious owner could authorize an incorrect active claim, so production keys should be separated and protected. Administrative recovery can redirect an expired payment after its public delay. These are explicit trust boundaries: wallet signatures do not make social-identity verification fully trustless. This README describes protections in the implementation, not a claim of an independent security audit.
+
+### Separate invoice escrow
+
+`InvoiceEscrow.sol` binds payment authorizations to the invoice ID, published-details hash, exact amount, issuer, payer, chain, contract and deadline. It accepts only its configured six-decimal USDC token, checks the exact transferred amount, and prevents duplicate funding or release. Reserved invoice funds cannot be withdrawn through the surplus-token rescue function.
+
+The invoicer alone can release a funded invoice normally. The owner has full recovery authority over any invoice still held in escrow and may redirect the entire amount to a chosen wallet. Recovery records the recipient and reason hash onchain. This is a trusted administrator model, not a trustless dispute system; neither administrator nor invoicer can reverse funds already released. The payment review discloses that authority before signing.
+
+Invoice checkout fails closed until the backend verifies the deployed contract's token, owner, treasury, signer, network and configuration. Local tests exercise real wallet signatures, MongoDB persistence, API access boundaries, onchain settlement, recovery, replay protection and adversarial token callbacks. They do not replace an independent audit or production wallet testing.
 
 ## Transaction costs
 
@@ -172,9 +189,21 @@ The application starts with safe local defaults, but individual features require
 | `ARCHITECT_SIGNER_KEY` | Server-only EIP-712 claim authorization key |
 | `ARCHITECT_ADMIN_ADDRESS` | Contract owner or administrative multisig |
 | `ARCHITECT_TREASURY_ADDRESS` | Wallet that receives the private-payment fee |
+| `INVOICE_ESCROW_ADDRESS` | Separate deployed invoice escrow; leaving it blank disables publishing and checkout |
+| `INVOICE_SIGNER_KEY` | Server-only invoice payment authorization key, separate from the claim signer |
+| `INVOICE_ADMIN_ADDRESS` | Invoice owner with full recovery authority over funds still held in escrow |
+| `INVOICE_TREASURY_ADDRESS` | Treasury matched against the invoice contract before authorizing payment |
 | `COINGECKO_API_KEY` or `CMC_API_KEY` | Optional server-side token price source |
 
 Never put a private key, database credential, provider secret, or OAuth secret in a `VITE_*` variable. Vite variables are included in the browser bundle.
+
+### Activate invoice checkout
+
+Compile and test the contracts first. Configure `contracts/.env` with the Arc RPC, a deployment wallet, the invoice authorization signer's **public address**, admin and treasury. Review these addresses, then explicitly set `CONFIRM_DEPLOY=invoice-arc-5042` for mainnet (or `invoice-arc-5042002` for testnet) and run `npm run deploy:invoices` inside `contracts/`. This broadcasts a real deployment and spends gas; it is not part of the test command.
+
+Set the resulting address and matching signer, admin and treasury in the backend environment, retain its MongoDB database, and redeploy the backend and frontend. No signing key belongs in the frontend. Existing private-payment escrow settings remain separate. Test a small published invoice through funding, release and recovery before announcing availability.
+
+The MongoDB integration tests require a local `mongod` executable. Set `TEST_MONGOD` when it is installed outside the macOS Homebrew default. Tests start isolated temporary databases and remove them afterward; they do not use the production database.
 
 ### Configure the frontend
 

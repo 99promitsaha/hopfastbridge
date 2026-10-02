@@ -1,3 +1,4 @@
+import { LoadingSpinner, LoadingState } from './Loading';
 import { useState } from "react";
 import { Copy, ExternalLink, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { formatUnits } from "viem";
@@ -75,11 +76,12 @@ export function ArchitectDeposits({
           <p>See direct Hopfast ID transfers and private X username payments sent from this wallet.</p>
         </div>
         <button className="hf-deposits-load" disabled={!wallet || busy} onClick={load}>
-          <RefreshCw size={14} className={busy ? "hf-spin" : ""} />
+          {busy ? <LoadingSpinner size={14} /> : <RefreshCw size={14} />}
           {busy ? "Loading…" : loaded ? "Refresh" : wallet ? "Load payments" : "Connect to load"}
         </button>
       </header>
       {error && <p role="alert">{error}</p>}
+      {busy && !loaded && <LoadingState label="Loading your payments…" />}
       {loaded && (items.length > 0 || directItems.length > 0) && (
         <div className="hf-activity-kind" role="group" aria-label="Filter payment type">
           <button className={kind === 'all' ? 'active' : ''} type="button" onClick={() => setKind('all')}>All</button>
@@ -151,7 +153,7 @@ export function ArchitectDeposits({
               )}
               {e.state === 1 && Date.now() >= e.expiresAt && (
                 <button disabled={busy} onClick={() => reclaim(e.envelopeId)}>
-                  <RotateCcw size={13} /> Reclaim {formatDisplayAmount(formatUnits(net, 6))} USDC
+                  {busy ? <LoadingSpinner size={13} /> : <RotateCcw size={13} />} Reclaim {formatDisplayAmount(formatUnits(net, 6))} USDC
                 </button>
               )}
               </div>

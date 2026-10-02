@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import architectsRoutes from './architects.routes.js';
+import invoicesRoutes from './invoices.routes.js';
 import architectDeploymentRoutes from './architectDeployment.routes.js';
 import healthRoutes from './health.routes.js';
 import quotesRoutes from './quotes.routes.js';
@@ -16,6 +17,7 @@ import priceRoutes from './prices.routes.js';
 const router = Router();
 router.use('/', architectDeploymentRoutes);
 router.use('/', architectsRoutes);
+router.use('/', invoicesRoutes);
 router.use('/', priceRoutes);
 router.use('/', paymentRoutes);
 

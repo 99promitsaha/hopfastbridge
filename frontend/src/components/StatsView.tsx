@@ -1,3 +1,4 @@
+import { LoadingState } from './Loading';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { API_BASE_URL } from '../constants';
@@ -109,7 +110,7 @@ export function StatsView({ onBack }: Props) {
         </div>
       </div>
 
-      {loading && <p className="hf-stats-loading">Loading activity…</p>}
+      {loading && <LoadingState label="Loading activity…" />}
       {error && <p className="hf-stats-error">{error}</p>}
 
       {data && !loading && (

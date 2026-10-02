@@ -1,3 +1,5 @@
+import { clearInvoiceSessions } from '../services/invoiceService';
+import { LoadingSpinner } from './Loading';
 import { useEffect, useMemo, useState } from 'react';
 import { LogOut, Wallet2 } from 'lucide-react';
 import { useConnectOrCreateWallet, usePrivy, useWallets } from '@privy-io/react-auth';
@@ -106,8 +108,8 @@ export function PrivyWalletConnector({
       setProviderAddress(nextAddress);
     };
 
-    const handleAccountsChanged = (...args: unknown[]) => syncAccounts(args[0]);
-    const handleProviderDisconnect = () => syncAccounts([]);
+    const handleAccountsChanged = (...args: unknown[]) => { clearInvoiceSessions(); syncAccounts(args[0]); };
+    const handleProviderDisconnect = () => { clearInvoiceSessions(); syncAccounts([]); };
 
     void activeWallet.getEthereumProvider()
       .then(async (nextProvider) => {
@@ -159,7 +161,7 @@ export function PrivyWalletConnector({
   }, [activeWallet, onWalletBridge, walletAddress]);
 
   if (!ready) {
-    return <div className="hf-wallet-pill hf-wallet-pill-muted">Preparing wallet…</div>;
+    return <div className="hf-wallet-pill hf-wallet-pill-muted"><LoadingSpinner /> Preparing wallet…</div>;
   }
 
   if (!walletAddress) {
@@ -189,6 +191,7 @@ export function PrivyWalletConnector({
 
   async function disconnectWallet() {
     if (disconnecting) return;
+    clearInvoiceSessions();
 
     setConnectError('');
     setDisconnecting(true);
@@ -236,7 +239,7 @@ export function PrivyWalletConnector({
       >
         {connectedLabel}
         <span className="hf-wallet-disconnect-icon" aria-hidden="true">
-          <LogOut size={14} />
+          {disconnecting ? <LoadingSpinner size={14} /> : <LogOut size={14} />}
         </span>
       </button>
       {connectError && <span role="alert">{connectError}</span>}

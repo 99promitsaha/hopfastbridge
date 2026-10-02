@@ -1,0 +1,12 @@
+import fs from 'node:fs';
+import { JsonRpcProvider, Wallet, ContractFactory, isAddress } from 'ethers';
+const admin = process.env.INVOICE_ADMIN_ADDRESS || '0xe7953857d0dBA2d39B6Fb8e63296e408058120F4';
+const treasury = process.env.INVOICE_TREASURY_ADDRESS || admin;
+const signer = process.env.INVOICE_SIGNER_ADDRESS;
+if (![admin,treasury,signer].every(value => value && isAddress(value)) || !process.env.DEPLOYER_PRIVATE_KEY || !process.env.ARC_RPC_URL) throw new Error('Configure invoice admin, treasury, signer, RPC and deployer credentials.');
+const provider = new JsonRpcProvider(process.env.ARC_RPC_URL), {chainId} = await provider.getNetwork();
+if (![5042n,5042002n].includes(chainId) || process.env.CONFIRM_DEPLOY !== `invoice-arc-${chainId}`) throw new Error('Review invoice deployment and explicitly set CONFIRM_DEPLOY=invoice-arc-<chainId>.');
+const artifact = JSON.parse(fs.readFileSync('artifacts/InvoiceEscrow.json'));
+const contract = await new ContractFactory(artifact.abi,artifact.evm.bytecode.object,new Wallet(process.env.DEPLOYER_PRIVATE_KEY,provider)).deploy('0x3600000000000000000000000000000000000000',admin,treasury,signer);
+await contract.waitForDeployment();
+console.log(JSON.stringify({ chainId:chainId.toString(), contract:await contract.getAddress(), admin, treasury, signer, transaction:contract.deploymentTransaction().hash }));

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/compile.mjs",
+    "deploy:invoices": "node --env-file-if-exists=.env scripts/deploy-invoices.mjs",
     "test": "npm run build && npm --prefix ../backend run build && node --test test/*.test.mjs",
     "deploy": "node --env-file-if-exists=.env scripts/deploy.mjs"
   },

@@ -1,3 +1,4 @@
+import { LoadingSpinner, LoadingState } from './Loading';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Clock3, ExternalLink, ShieldCheck } from 'lucide-react';
 import { formatUnits } from 'viem';
@@ -50,6 +51,7 @@ export function ArchitectClaim({
   };
 
   useEffect(() => {
+    if (id && !access) { setError('This payment link is incomplete. Ask the sender for the full claim link.'); return; }
     refresh().catch((cause) =>
       setError(cause instanceof Error ? cause.message : 'Payment unavailable.')
     );
@@ -127,6 +129,7 @@ export function ArchitectClaim({
     <section className="hf-claim-card" aria-label="Claim your Arc payment">
       <p className="hf-claim-eyebrow"><ShieldCheck size={13} /> Private Arc payment</p>
       <h2>{done ? 'USDC is in your wallet.' : 'A payment is waiting for you.'}</h2>
+      {!envelope && !error && <LoadingState label="Loading payment…" rows={2} />}
       {envelope && (
         <>
           <div className="hf-claim-recipient"><span>ADDRESSED TO</span><strong>@{envelope.handle}</strong></div>
@@ -155,7 +158,7 @@ export function ArchitectClaim({
             : session
               ? 'Claim USDC to this wallet'
               : 'Verify username with X'}
-          {!busy && <ExternalLink size={14} />}
+          {busy ? <LoadingSpinner size={14} /> : <ExternalLink size={14} />}
         </button>
       )}
       {wallet &&
@@ -167,7 +170,7 @@ export function ArchitectClaim({
             disabled={busy}
             onClick={() => action('reclaim')}
           >
-            Return unclaimed USDC to sender
+            {busy ? <><LoadingSpinner /> Returning USDC…</> : 'Return unclaimed USDC to sender'}
           </button>
         )}
       {error && <p className="hf-support-error" role="alert">{error}</p>}

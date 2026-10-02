@@ -1,3 +1,4 @@
+import { LoadingSpinner } from './Loading';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, ExternalLink, Loader2, Shield, X } from 'lucide-react';
@@ -306,6 +307,7 @@ export function PaymentReview({
                   disabled={busy}
                   onClick={() => void approve()}
                 >
+                  {busy && <LoadingSpinner />}
                   {busy
                     ? 'Checking wallet…'
                     : submittedHash

@@ -7,6 +7,10 @@ const emptyToUndefined = (value: unknown) =>
   typeof value === 'string' && value.trim().length === 0 ? undefined : value;
 
 const schema = z.object({
+  INVOICE_ESCROW_ADDRESS: z.preprocess(emptyToUndefined, z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional()),
+  INVOICE_SIGNER_KEY: z.preprocess(emptyToUndefined, z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional()),
+  INVOICE_ADMIN_ADDRESS: z.string().regex(/^0x[0-9a-fA-F]{40}$/).default('0xe7953857d0dBA2d39B6Fb8e63296e408058120F4'),
+  INVOICE_TREASURY_ADDRESS: z.string().regex(/^0x[0-9a-fA-F]{40}$/).default('0xe7953857d0dBA2d39B6Fb8e63296e408058120F4'),
   ARCHITECT_ESCROW_ADDRESS: z.preprocess(emptyToUndefined, z.string().regex(/^0x[0-9a-fA-F]{40}$/).optional()),
   ARCHITECT_CHAIN_ID: z.coerce.number().default(5042),
   ARCHITECT_SIGNER_KEY: z.preprocess(emptyToUndefined, z.string().regex(/^0x[0-9a-fA-F]{64}$/).optional()),

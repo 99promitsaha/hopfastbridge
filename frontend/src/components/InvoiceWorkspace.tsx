@@ -1,0 +1,140 @@
+import { LoadingSpinner, LoadingState } from './Loading';
+import { UsdcAmount } from './UsdcAmount';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, Check, Copy, Download, FileText, Plus, Settings2, Trash2 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
+import { isAddress, keccak256, stringToHex } from 'viem';
+import { invoiceApi, invoiceLogin, invoiceWrite, usdc, type Billing, type Business, type InvoiceConfig, type InvoiceInput, type InvoiceRecord, type PaymentAuthorization } from '../services/invoiceService';
+import type { PrivyWalletBridge } from './WalletConnector';
+
+const emptyBilling: Billing = { name: '', email: '', address: '' };
+const today = () => new Date().toISOString().slice(0, 10);
+function blankInvoice(): InvoiceInput { return { number: '', client: { ...emptyBilling }, issueDate: today(), dueDate: today(), lines: [{ description: '', quantity: '1', rate: '' }], discount: '0', taxBps: 0, notes: '' }; }
+function BillingFields({ value, onChange, label, required = true }: { value: Billing; onChange: (value: Billing) => void; label: string; required?: boolean }) {
+  return <fieldset className="hf-invoice-fields"><legend>{label}</legend>
+    <label>Name<input required={required} maxLength={160} value={value.name} onChange={e => onChange({ ...value, name: e.target.value })} placeholder="Name or business name" /></label>
+    <label>Email <span>optional</span><input type="email" maxLength={254} value={value.email} onChange={e => onChange({ ...value, email: e.target.value })} placeholder="name@example.com" /></label>
+    <label className="hf-invoice-wide">Billing address <span>optional</span><textarea maxLength={800} value={value.address} onChange={e => onChange({ ...value, address: e.target.value })} placeholder="Street, city, country and postal code" rows={2} /></label>
+  </fieldset>;
+}
+
+export function InvoiceWorkspace({ wallet, onConnect }: { wallet: PrivyWalletBridge | null; onConnect?: () => void }) {
+  const publicId = new URLSearchParams(location.search).get('invoice');
+  const [session, setSession] = useState('');
+  const [business, setBusiness] = useState<Business>({ ...emptyBilling, clients: [] });
+  const [clientDraft, setClientDraft] = useState<Billing>({ ...emptyBilling });
+  const [draft, setDraft] = useState<InvoiceInput>(blankInvoice);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
+  const [page, setPage] = useState(0), [hasMore, setHasMore] = useState(false);
+  const [admin, setAdmin] = useState(false), [adminMode, setAdminMode] = useState(false);
+  const [selected, setSelected] = useState<InvoiceRecord | null>(null);
+  const [screen, setScreen] = useState<'list' | 'settings' | 'create' | 'detail'>(publicId ? 'detail' : 'list');
+  const [busy, setBusy] = useState(false), [error, setError] = useState('');
+  const walletRef = useRef(wallet?.address.toLowerCase()); walletRef.current = wallet?.address.toLowerCase();
+  useEffect(() => {
+    setSession(''); setInvoices([]); setBusiness({ ...emptyBilling, clients: [] }); setAdmin(false); setAdminMode(false); setError('');
+    // Wallet providers can briefly reconnect during a chain switch. Keep a
+    // published invoice open while clearing wallet-specific workspace access.
+    if (!publicId && !(screen === 'detail' && selected?.handle && selected.state !== 'draft')) {
+      setSelected(null); setScreen('list');
+    }
+  }, [wallet?.address, publicId]);
+  async function perform(action: () => Promise<void>) { setBusy(true); setError(''); try { await action(); } catch (e) { setError(e instanceof Error ? e.message : 'Please try again.'); } finally { setBusy(false); } }
+  async function load(token: string, nextPage = page, all = adminMode) { const result = await invoiceApi<{ invoices: InvoiceRecord[]; hasMore: boolean }>('/' + (all ? 'admin' : 'mine') + '?page=' + nextPage, token); setInvoices(result.invoices); setHasMore(result.hasMore); setPage(nextPage); }
+  async function unlock() { if (!wallet) return onConnect?.(); const address = wallet.address.toLowerCase(); await perform(async () => { const token = await invoiceLogin(wallet); if (walletRef.current !== address) return; const [result, config] = await Promise.all([invoiceApi<{ details: Business | null }>('/business', token), invoiceApi<InvoiceConfig>('/config')]); if (walletRef.current !== address) return; setAdmin(config.admin.toLowerCase() === address); setAdminMode(false); setBusiness(result.details ?? { ...emptyBilling, clients: [] }); setSession(token); await load(token, 0, false); }); }
+  async function saveBusiness() { await perform(async () => { const result = await invoiceApi<{ details: Business }>('/business', session, business, 'PUT'); setBusiness(result.details); setScreen('list'); }); }
+  async function publish(invoice: InvoiceRecord) { await perform(async () => { const result = await invoiceApi<{ invoice: InvoiceRecord }>(`/${invoice.invoiceId}/publish`, session, {}); setSelected(result.invoice); await load(session); }); }
+  async function cancel(invoice: InvoiceRecord) { if (!window.confirm('Cancel this unpaid invoice?')) return; await perform(async () => { const result = await invoiceApi<{ invoice: InvoiceRecord }>(`/${invoice.invoiceId}/cancel`, session, {}); setSelected(result.invoice); setScreen('list'); await load(session); }); }
+  async function deleteCancelled(invoice: InvoiceRecord) {
+    if (!window.confirm(`Permanently delete invoice ${invoice.input.number}? Its details will be removed from the database and its shared link will stop working. This cannot be undone.`)) return;
+    await perform(async () => {
+      await invoiceApi(`/${invoice.invoiceId}`, session, undefined, 'DELETE');
+      if (selected?.invoiceId === invoice.invoiceId) setSelected(null);
+      setScreen('list');
+      await load(session, 0);
+    });
+  }
+
+
+  if (publicId || (screen === 'detail' && selected?.state !== 'draft' && selected?.handle)) return <div className="hf-invoice-workspace">
+    {!publicId && <button className="hf-invoice-back" onClick={() => setScreen('list')}><ArrowLeft size={16} /> Your invoices</button>}
+    <InvoiceCheckout id={publicId ?? selected!.invoiceId} wallet={wallet} onConnect={onConnect} />
+  </div>;
+  if (!session) return <section className="hf-invoice-welcome"><div className="hf-invoice-symbol"><FileText size={30} /></div><h2>Your work. A clear way to get paid.</h2><p>Create a detailed invoice, share a link, and collect USDC on Arc. Save your billing details and clients for the next one.</p><button className="hf-invoice-primary" disabled={busy} onClick={unlock}>{busy ? 'Unlocking…' : wallet ? 'Unlock your invoices' : 'Connect wallet'} {busy ? <LoadingSpinner size={17} /> : <ArrowRight size={17} />}</button><p className="hf-invoice-small">Sharing requires a Hopfast ID. Create yours in Receive.</p>{error && <p className="hf-support-error" role="alert">{error}</p>}</section>;
+  return <section className="hf-invoice-workspace">
+    <header className="hf-invoice-toolbar"><div><h2>{screen === 'settings' ? 'Your billing details' : screen === 'create' ? 'Create an invoice' : screen === 'detail' ? 'Invoice draft' : 'Your invoices'}</h2><p>{screen === 'list' ? 'From first draft to payment in your wallet.' : 'USDC on Arc. Details your client can understand.'}</p></div><div>
+      {screen !== 'list' && <button className="hf-invoice-secondary" onClick={() => setScreen('list')}><ArrowLeft size={16} /> Back</button>}
+      {screen === 'list' && <>{admin && <button className="hf-invoice-secondary" disabled={busy} onClick={() => void perform(async () => { await load(session, 0, !adminMode); setAdminMode(!adminMode); })}>{adminMode ? 'My invoices' : 'Admin invoices'}</button>}<button className="hf-invoice-secondary" onClick={() => setScreen('settings')}><Settings2 size={16} /> Billing & clients</button><button className="hf-invoice-primary" onClick={() => { setEditingId(null); setDraft(blankInvoice()); setScreen('create'); }}><Plus size={16} /> New invoice</button></>}
+    </div></header>
+    {error && <p className="hf-support-error" role="alert">{error}</p>}
+    {screen === 'settings' && <form className="hf-invoice-paper" onSubmit={e => { e.preventDefault(); void saveBusiness(); }}>
+      <BillingFields value={business} label="Your business" onChange={value => setBusiness({ ...business, ...value })} />
+      <div className="hf-invoice-client-list"><h3>Saved clients</h3>{business.clients.map(client => <div key={client.id}><span>{client.name}<small>{client.email}</small></span><button type="button" aria-label={`Remove ${client.name}`} onClick={() => setBusiness({ ...business, clients: business.clients.filter(c => c.id !== client.id) })}><Trash2 size={16} /></button></div>)}</div>
+      <BillingFields value={clientDraft} label="Add a client" onChange={setClientDraft} required={false} />
+      <button type="button" className="hf-invoice-secondary" disabled={!clientDraft.name.trim() || business.clients.length >= 100} onClick={() => { setBusiness({ ...business, clients: [...business.clients, { ...clientDraft, id: crypto.randomUUID() }] }); setClientDraft({ ...emptyBilling }); }}><Plus size={16} /> Add client</button>
+      <button className="hf-invoice-primary" disabled={busy}>{busy ? 'Saving…' : 'Save billing details'} {busy ? <LoadingSpinner /> : <Check size={16} />}</button>
+    </form>}
+    {screen === 'create' && <form className="hf-invoice-paper" onSubmit={e => { e.preventDefault(); void perform(async () => { const result = await invoiceApi<{ invoice: InvoiceRecord }>(editingId ? `/${editingId}` : '', session, draft, editingId ? 'PUT' : 'POST'); setSelected(result.invoice); setScreen('detail'); await load(session); }); }}>
+      <div className="hf-invoice-fields"><label>Invoice number<input required maxLength={60} placeholder="INV-001" value={draft.number} onChange={e => setDraft({ ...draft, number: e.target.value })} /></label><label>Saved client<select value={business.clients.find(client => client.name === draft.client.name && client.email === draft.client.email && client.address === draft.client.address)?.id || ""} onChange={e => { const client = business.clients.find(c => c.id === e.target.value); if (client) setDraft({ ...draft, client: { name: client.name, email: client.email, address: client.address } }); }}><option value="">Choose a client or enter below</option>{business.clients.map(c => <option value={c.id} key={c.id}>{c.name}</option>)}</select></label><label>Issue date<input required type="date" value={draft.issueDate} onChange={e => setDraft({ ...draft, issueDate: e.target.value })} /></label><label>Due date<input required type="date" min={draft.issueDate} value={draft.dueDate} onChange={e => setDraft({ ...draft, dueDate: e.target.value })} /></label></div>
+      <BillingFields value={draft.client} label="Bill to" onChange={client => setDraft({ ...draft, client })} />
+      <h3>Invoice items</h3><div className="hf-invoice-line-head"><span>Description</span><span>Quantity</span><span>Rate · USDC</span></div>
+      {draft.lines.map((line, index) => <div className="hf-invoice-line" key={index}><input aria-label={`Item ${index + 1} description`} required maxLength={500} placeholder="Design, development, consulting…" value={line.description} onChange={e => setDraft({ ...draft, lines: draft.lines.map((l, i) => i === index ? { ...l, description: e.target.value } : l) })} /><input aria-label={`Item ${index + 1} quantity`} required inputMode="decimal" value={line.quantity} onChange={e => setDraft({ ...draft, lines: draft.lines.map((l, i) => i === index ? { ...l, quantity: e.target.value } : l) })} /><input aria-label={`Item ${index + 1} rate`} required inputMode="decimal" placeholder="0.00" value={line.rate} onChange={e => setDraft({ ...draft, lines: draft.lines.map((l, i) => i === index ? { ...l, rate: e.target.value } : l) })} /><button type="button" aria-label={`Remove item ${index + 1}`} disabled={draft.lines.length === 1} onClick={() => setDraft({ ...draft, lines: draft.lines.filter((_, i) => i !== index) })}><Trash2 size={16} /></button></div>)}
+      <button type="button" className="hf-invoice-secondary" disabled={draft.lines.length >= 50} onClick={() => setDraft({ ...draft, lines: [...draft.lines, { description: '', quantity: '1', rate: '' }] })}><Plus size={16} /> Add item</button>
+      <div className="hf-invoice-fields"><label>Discount · USDC<input inputMode="decimal" value={draft.discount} onChange={e => setDraft({ ...draft, discount: e.target.value })} /></label><label>Tax · %<input type="number" min="0" max="100" step="0.01" value={draft.taxBps / 100} onChange={e => setDraft({ ...draft, taxBps: Math.round(Number(e.target.value) * 100) })} /></label><label className="hf-invoice-wide">Notes <span>optional</span><textarea maxLength={2000} placeholder="Project references or payment instructions" value={draft.notes} onChange={e => setDraft({ ...draft, notes: e.target.value })} /></label></div>
+      <p className="hf-invoice-small">Review the calculated total before publishing. Billing details appear on the shared invoice.</p><button className="hf-invoice-primary" disabled={busy}>{busy ? 'Saving…' : 'Save and review draft'} {busy ? <LoadingSpinner /> : <ArrowRight size={16} />}</button>
+    </form>}
+    {screen === 'detail' && selected && <><InvoicePaper invoice={selected} />{selected.state === 'draft' && <><div className="hf-invoice-actions"><button className="hf-invoice-primary" disabled={busy} onClick={() => void publish(selected)}>{busy ? 'Publishing…' : 'Publish invoice'} {busy ? <LoadingSpinner /> : <ArrowRight size={16} />}</button><button className="hf-invoice-secondary" disabled={busy} onClick={() => { setEditingId(selected.invoiceId); setDraft(selected.input); setScreen('create'); }}>Edit draft</button><button className="hf-invoice-secondary" disabled={busy} onClick={() => void cancel(selected)}>Discard draft</button></div><p className="hf-invoice-small">Publishing locks the amount, client details and receiving wallet. Your saved draft stays here if checkout is not configured yet.</p></>}</>}
+    {screen === 'list' && <>{busy && !invoices.length ? <LoadingState label="Loading invoices…" /> : <div className="hf-invoice-list">{invoices.length ? invoices.map(invoice => <div className="hf-invoice-row" key={invoice.invoiceId}><button onClick={() => { setSelected(invoice); setScreen('detail'); }}><FileText size={20} /><span><strong>{invoice.input.number}</strong><small>{invoice.input.client.name} · due {invoice.input.dueDate}</small></span><span className={`hf-invoice-status hf-invoice-status-${invoice.state}`}>{invoice.state}</span><strong><UsdcAmount value={usdc(invoice.totals.total)} /></strong><ArrowRight size={16} /></button>{invoice.state === 'cancelled' && invoice.owner === wallet?.address.toLowerCase() && <button className="hf-invoice-delete" disabled={busy} aria-label={`Permanently delete invoice ${invoice.input.number}`} title="Permanently delete cancelled invoice" onClick={() => void deleteCancelled(invoice)}>{busy ? <LoadingSpinner size={17} /> : <Trash2 size={17} />}</button>}</div>) : <div className="hf-invoice-empty"><FileText size={28} /><h3>Your first invoice starts here.</h3><p>Add your billing details, create an invoice, and share it with your client.</p></div>}</div>}<div className="hf-invoice-actions"><button className="hf-invoice-secondary" disabled={busy || page === 0} onClick={() => void perform(() => load(session, page - 1))}>Previous</button><button className="hf-invoice-secondary" disabled={busy || !hasMore} onClick={() => void perform(() => load(session, page + 1))}>Next</button><button className="hf-invoice-secondary" disabled={busy} onClick={() => void perform(() => load(session))}>{busy ? <><LoadingSpinner /> Updating…</> : 'Refresh status'}</button></div></>}
+  </section>;
+}
+
+function InvoicePaper({ invoice }: { invoice: InvoiceRecord }) {
+  return <article className="hf-invoice-paper"><header className="hf-invoice-document-header"><div><img src="/brand/hopfast-mark.svg" alt="Hopfast" /><h2>Invoice {invoice.input.number}</h2>{invoice.handle && <span>{invoice.handle}@hopfast</span>}</div><span className={`hf-invoice-status hf-invoice-status-${invoice.state}`}>{invoice.state}</span></header>
+    <div className="hf-invoice-parties"><div><h3>From</h3><strong>{invoice.billing?.name ?? 'Your saved billing details'}</strong><p>{invoice.billing?.address}</p><p>{invoice.billing?.email}</p></div><div><h3>Bill to</h3><strong>{invoice.input.client.name}</strong><p>{invoice.input.client.address}</p><p>{invoice.input.client.email}</p></div><div><h3>Dates</h3><p>Issued {invoice.input.issueDate}</p><p>Due {invoice.input.dueDate}</p>{invoice.state === 'open' && invoice.input.dueDate < today() && <span>Overdue</span>}</div></div>
+    <div className="hf-invoice-table-scroll"><table><thead><tr><th>Description</th><th>Qty</th><th>Rate · USDC</th><th>Amount · USDC</th></tr></thead><tbody>{invoice.input.lines.map((line, i) => <tr key={i}><td>{line.description}</td><td>{line.quantity}</td><td><UsdcAmount value={line.rate} /></td><td><UsdcAmount value={usdc(invoice.totals.lineTotals[i])} /></td></tr>)}</tbody></table></div>
+    <dl className="hf-invoice-totals"><div><dt>Subtotal</dt><dd><UsdcAmount value={usdc(invoice.totals.subtotal)} /></dd></div>{BigInt(invoice.totals.discount) > 0n && <div><dt>Discount</dt><dd><UsdcAmount value={`−${usdc(invoice.totals.discount)}`} /></dd></div>}{BigInt(invoice.totals.tax) > 0n && <div><dt>Tax</dt><dd><UsdcAmount value={usdc(invoice.totals.tax)} /></dd></div>}<div><dt>Total</dt><dd><UsdcAmount value={usdc(invoice.totals.total)} /></dd></div></dl>
+    {invoice.input.notes && <div className="hf-invoice-notes"><h3>Notes</h3><p>{invoice.input.notes}</p></div>}
+  </article>;
+}
+
+function InvoiceCheckout({ id, wallet, onConnect }: { id: string; wallet: PrivyWalletBridge | null; onConnect?: () => void }) {
+  const [invoice, setInvoice] = useState<InvoiceRecord | null>(null), [config, setConfig] = useState<InvoiceConfig | null>(null);
+  const [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [review, setReview] = useState(false);
+  const [recoveryRecipient, setRecoveryRecipient] = useState(''), [recoveryReason, setRecoveryReason] = useState('');
+  const addressRef = useRef(wallet?.address.toLowerCase()); addressRef.current = wallet?.address.toLowerCase();
+  async function refresh() { const result = await invoiceApi<{ invoice: InvoiceRecord }>(`/${id}`); setInvoice(result.invoice); }
+  useEffect(() => { let active = true; setInvoice(null); setReview(false); setError(''); Promise.all([invoiceApi<{ invoice: InvoiceRecord }>(`/${id}`), invoiceApi<InvoiceConfig>('/config')]).then(([record, settings]) => { if (active) { setInvoice(record.invoice); setConfig(settings); } }).catch(e => { if (active) setError(e.message); }); return () => { active = false; }; }, [id]);
+  useEffect(() => { setReview(false); }, [wallet?.address]);
+  useEffect(() => { if (!invoice || !['open', 'funded', 'cancelling'].includes(invoice.state)) return; const timer = setInterval(() => { if (document.visibilityState === 'visible' && !busy) void refresh().catch(() => {}); }, 20000); return () => clearInterval(timer); }, [id, invoice?.state, busy]);
+  async function act(action: () => Promise<void>) { setBusy(true); setError(''); setNotice(''); try { await action(); } catch (e) { setError(e instanceof Error ? e.message : 'Please try again.'); } finally { setBusy(false); } }
+  async function pay() {
+    if (!wallet || !invoice || !config) return;
+    await act(async () => { const session = await invoiceLogin(wallet); if (addressRef.current !== wallet.address.toLowerCase()) throw new Error('Wallet changed. Review the payment again.'); const authorization = await invoiceApi<PaymentAuthorization>(`/${id}/authorize`, session, {});
+      if (authorization.invoiceId !== invoice.invoiceId || authorization.issuer.toLowerCase() !== invoice.owner || authorization.payer.toLowerCase() !== wallet.address.toLowerCase() || authorization.amount !== invoice.totals.total || authorization.detailsHash !== invoice.detailsHash || authorization.contract.toLowerCase() !== invoice.contract) throw new Error('Invoice changed. Reload it before paying.');
+      const txHash = await invoiceWrite(config, wallet, authorization.contract, 'pay', [authorization.invoiceId, authorization.issuer, BigInt(authorization.amount), authorization.detailsHash, BigInt(authorization.deadline), authorization.signature]);
+      setReview(false); setNotice('Payment confirmed on Arc. The invoicer can now release it.'); await invoiceApi(`/${id}/confirm`, session, { txHash }); await refresh();
+    });
+  }
+  async function release() { if (!wallet || !invoice?.contract || !config) return; await act(async () => { const session = await invoiceLogin(wallet); const txHash = await invoiceWrite(config, wallet, invoice.contract!, 'release', [invoice.invoiceId]); await invoiceApi(`/${id}/confirm`, session, { txHash }); await refresh(); setNotice('Payment released to your wallet.'); }); }
+  async function recover() { if (!wallet || !invoice?.contract || !config || !isAddress(recoveryRecipient) || /^0x0{40}$/i.test(recoveryRecipient) || !recoveryReason.trim()) return; if (!window.confirm(`Recover the full escrowed payment to ${recoveryRecipient}? This cannot be undone.`)) return; await act(async () => { const session = await invoiceLogin(wallet); const txHash = await invoiceWrite(config, wallet, invoice.contract!, 'recover', [invoice.invoiceId, recoveryRecipient, keccak256(stringToHex(recoveryReason.trim()))]); await invoiceApi(`/${id}/confirm`, session, { txHash }); await refresh(); setNotice('Full escrowed payment recovered.'); }); }
+  async function copy() { if (!invoice?.url) return; await act(async () => { await navigator.clipboard.writeText(invoice.url!); setNotice('Invoice link copied.'); }); }
+  function receipt() { if (!invoice) return; const data = JSON.stringify({ type: 'Hopfast invoice receipt', invoiceNumber: invoice.input.number, invoiceId: invoice.invoiceId, invoicer: invoice.handle, client: invoice.input.client.name, totalUSDC: usdc(invoice.totals.total), state: invoice.state, payer: invoice.payer, contract: invoice.contract, paymentTransaction: invoice.fundedTx, settlementTransaction: invoice.settlementTx }, null, 2); const url = URL.createObjectURL(new Blob([data], { type: 'application/json' })); const a = document.createElement('a'); a.href = url; a.download = `hopfast-invoice-${invoice.invoiceId.slice(2, 10)}.json`; a.click(); URL.revokeObjectURL(url); }
+  if (!invoice) return error ? <div className="hf-invoice-empty" role="alert"><FileText size={28} /><p>{error}</p></div> : <LoadingState label="Loading invoice…" />;
+  const issuer = wallet?.address.toLowerCase() === invoice.owner;
+  const fee = (BigInt(invoice.totals.total) * 50n + 9999n) / 10000n;
+  return <div className="hf-invoice-checkout"><InvoicePaper invoice={invoice} /><aside className="hf-invoice-pay-panel">
+    {review ? <><h3>Review payment</h3><p>Invoice {invoice.input.number} for {invoice.handle}@hopfast.</p><dl><div><dt>You pay</dt><dd><UsdcAmount value={usdc(invoice.totals.total)} /></dd></div><div><dt><span tabIndex={0} className="hf-invoice-fee-hint">Hopfast fee · 0.5%<span role="tooltip">helps us keep the lights on and maintain the infra.</span></span></dt><dd><UsdcAmount value={usdc(fee)} /></dd></div><div><dt>Invoicer receives</dt><dd><UsdcAmount value={usdc(BigInt(invoice.totals.total) - fee)} /></dd></div></dl><p className="hf-invoice-small">Check the recipient, invoice details and total before confirming your payment.</p><details className="hf-invoice-small"><summary>How payment works</summary><p>Funds stay in escrow until the invoicer releases them. Hopfast’s administrator can recover funds still held in escrow. Network gas is separate.</p></details><button className="hf-invoice-primary" disabled={busy} onClick={() => void pay()}>{busy ? 'Follow the wallet prompts…' : 'Confirm in wallet'} {busy ? <LoadingSpinner /> : <ArrowRight size={16} />}</button><button className="hf-invoice-secondary" disabled={busy} onClick={() => setReview(false)}>Back to invoice</button></> : <>
+      <h3>{invoice.state === 'paid' ? 'Payment complete' : invoice.state === 'funded' ? 'Payment received in escrow' : invoice.state === 'recovered' ? 'Funds recovered by admin' : invoice.state === 'cancelling' ? 'Cancellation in progress' : invoice.state === 'cancelled' ? 'Invoice cancelled' : 'Pay this invoice'}</h3>
+      <p>{invoice.state === 'funded' ? 'The invoicer can release this payment to their linked wallet.' : invoice.state === 'paid' ? 'The invoicer has received the payment in their wallet on Arc.' : invoice.state === 'cancelling' ? 'Existing payment authorizations must expire before cancellation completes.' : invoice.state === 'recovered' ? 'This invoice cannot be paid or released again.' : 'USDC on Arc. Payment is tied to this invoice.'}</p>
+      {invoice.url && <><div className="hf-invoice-qr"><QRCodeSVG value={invoice.url} size={170} level="M" marginSize={2} /></div><small>Scan to open this invoice</small><button className="hf-invoice-secondary" disabled={busy} onClick={() => void copy()}>{busy ? <LoadingSpinner /> : <Copy size={16} />} Copy invoice link</button></>}
+      {invoice.state === 'open' && <button className="hf-invoice-primary" disabled={busy || !config?.configured} onClick={() => wallet ? setReview(true) : onConnect?.()}>{wallet ? 'Review payment' : 'Connect wallet to pay'} <ArrowRight size={16} /></button>}
+      {invoice.state === 'funded' && issuer && <button className="hf-invoice-primary" disabled={busy} onClick={() => void release()}>{busy ? 'Releasing…' : 'Release to your wallet'} {busy ? <LoadingSpinner /> : <ArrowRight size={16} />}</button>}
+      {invoice.state === 'paid' && <button className="hf-invoice-secondary" onClick={receipt}><Download size={16} /> Download receipt</button>}
+      {invoice.state === 'funded' && wallet?.address.toLowerCase() === config?.admin.toLowerCase() && <div className="hf-invoice-admin"><h3>Admin recovery</h3><p>Recover the full amount still held for this invoice. The destination and reason hash are recorded onchain.</p><label>Recovery wallet<input value={recoveryRecipient} placeholder={invoice.payer || '0x…'} onChange={e => setRecoveryRecipient(e.target.value)} /></label><button className="hf-invoice-secondary" onClick={() => setRecoveryRecipient(invoice.payer || '')}>Use payer wallet</button><label>Reason<input maxLength={300} value={recoveryReason} placeholder="Reason for recovery" onChange={e => setRecoveryReason(e.target.value)} /></label><button className="hf-invoice-primary" disabled={busy || !isAddress(recoveryRecipient) || /^0x0{40}$/i.test(recoveryRecipient) || !recoveryReason.trim()} onClick={() => void recover()}>{busy ? <><LoadingSpinner /> Recovering…</> : 'Recover full funds'}</button></div>}
+      {issuer && invoice.state === 'open' && <button className="hf-invoice-secondary" disabled={busy} onClick={() => void act(async () => { const session = await invoiceLogin(wallet!); await invoiceApi(`/${id}/cancel`, session, {}); await refresh(); })}>{busy ? <><LoadingSpinner /> Cancelling…</> : 'Cancel unpaid invoice'}</button>}
+    </>}
+    {invoice.fundedTx && <a className="hf-invoice-small" target="_blank" rel="noreferrer" href={`https://explorer.arc.io/tx/${invoice.fundedTx}`}>View payment transaction ↗</a>}{invoice.settlementTx && <a className="hf-invoice-small" target="_blank" rel="noreferrer" href={`https://explorer.arc.io/tx/${invoice.settlementTx}`}>View settlement transaction ↗</a>}
+    {notice && <p className="hf-invoice-notice" role="status">{notice}</p>}{error && <p className="hf-support-error" role="alert">{error}</p>}
+  </aside></div>;
+}

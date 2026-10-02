@@ -170,10 +170,10 @@ router.post("/architects/challenge", async (req, res, next) => {
     next(e);
   }
 });
-async function authenticate(body: any) {
+export async function authenticate(body: any, kind = 'challenge') {
   const proof = await ArchitectAuth.findOne({
     tokenHash: hash(String(body.nonce)),
-    kind: "challenge",
+    kind,
     expiresAt: { $gt: new Date() },
   });
   if (

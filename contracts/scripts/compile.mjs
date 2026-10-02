@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import solc from "solc";
 const sources = Object.fromEntries(
-  ["ArchitectEscrow.sol", "MockUSDC.sol"].map((name) => [
+  ["ArchitectEscrow.sol", "InvoiceEscrow.sol", "MockUSDC.sol", "InvoiceTestToken.sol"].map((name) => [
     name,
     { content: fs.readFileSync(`src/${name}`, "utf8") },
   ]),
@@ -35,24 +35,24 @@ for (const error of output.errors ?? []) {
   if (error.severity === "error") throw new Error(error.formattedMessage);
 }
 fs.mkdirSync("artifacts", { recursive: true });
-for (const name of ["ArchitectEscrow", "MockUSDC"])
+for (const name of ["ArchitectEscrow", "InvoiceEscrow", "MockUSDC", "InvoiceTestToken"])
   fs.writeFileSync(
     `artifacts/${name}.json`,
     JSON.stringify(output.contracts[`${name}.sol`][name], null, 2),
   );
-for (const folder of [
+for (const name of ["ArchitectEscrow", "InvoiceEscrow"]) for (const folder of [
   "../backend/src/contracts",
   "../frontend/src/contracts",
 ]) {
   fs.mkdirSync(folder, { recursive: true });
   fs.writeFileSync(
-    `${folder}/ArchitectEscrow.json`,
+    `${folder}/${name}.json`,
     JSON.stringify(
       {
-        abi: output.contracts["ArchitectEscrow.sol"].ArchitectEscrow.abi,
+        abi: output.contracts[`${name}.sol`][name].abi,
         ...(folder.includes("backend")
           ? {
-              bytecode: `0x${output.contracts["ArchitectEscrow.sol"].ArchitectEscrow.evm.bytecode.object}`,
+              bytecode: `0x${output.contracts[`${name}.sol`][name].evm.bytecode.object}`,
             }
           : {}),
       },

@@ -1,3 +1,4 @@
+import { LoadingSpinner } from './Loading';
 import { useEffect, useRef, useState } from 'react';
 import { AtSign, Check, Copy, Download, ExternalLink, QrCode, Share2, ShieldCheck } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -128,7 +129,7 @@ export function PaymentIdentity({
         </p>
         <button className="hf-support-primary" type="button" onClick={loadProfile} disabled={busy}>
           {busy ? 'Checking your wallet…' : wallet ? 'Show my Hopfast ID' : 'Connect wallet'}
-          <AtSign size={16} />
+          {busy ? <LoadingSpinner /> : <AtSign size={16} />}
         </button>
         <small><ShieldCheck size={13} /> Creating or moving an ID requires one wallet signature. It never moves funds.</small>
         {error && <p className="hf-support-error" role="alert">{error}</p>}
@@ -148,7 +149,7 @@ export function PaymentIdentity({
         </p>
         <div className="hf-identity-example"><strong>username</strong><span>@hopfast</span></div>
         <button className="hf-support-primary" type="button" onClick={connectX} disabled={busy}>
-          {busy ? 'Opening X…' : 'Verify with X'} <ExternalLink size={15} />
+          {busy ? 'Opening X…' : 'Verify with X'} {busy ? <LoadingSpinner size={15} /> : <ExternalLink size={15} />}
         </button>
         <small>Verify again later if you want this ID to point to another wallet.</small>
         {error && <p className="hf-support-error" role="alert">{error}</p>}

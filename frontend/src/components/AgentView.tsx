@@ -1,5 +1,6 @@
+import { LoadingSpinner } from './Loading';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AtSign, Check, Copy, MessageCircle, QrCode, ScanLine, Send, Share2, WalletCards, X } from 'lucide-react';
+import { AtSign, Check, Copy, FileText, MessageCircle, QrCode, ScanLine, Send, Share2, WalletCards, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { architectApi, escrowWrite, walletProof, type ArchitectConfig } from '../services/architectService';
 import { fundingAmounts } from '../lib/builderFunding';
@@ -8,6 +9,7 @@ import { ArchitectClaim } from './ArchitectClaim';
 import { ArchitectDeposits } from './ArchitectDeposits';
 import { PaymentIdentity } from './PaymentIdentity';
 import { ProfilePayment } from './ProfilePayment';
+import { InvoiceWorkspace } from './InvoiceWorkspace';
 
 type DraftEnvelope = { envelopeId: string; xIdentity: string; gross: string; claimUrl: string; access: string };
 type DetectedBarcode = { rawValue: string };
@@ -30,8 +32,8 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
 }) {
   const isClaim = new URLSearchParams(location.search).has('envelope');
   const claimError = new URLSearchParams(location.search).has('claimError');
-  const [tab, setTab] = useState<'send' | 'receive' | 'mine'>(() =>
-    new URLSearchParams(location.search).has('payProfile') ? 'receive' : 'send'
+  const [tab, setTab] = useState<'send' | 'receive' | 'mine' | 'invoices'>(() =>
+    new URLSearchParams(location.search).has('invoice') ? 'invoices' : new URLSearchParams(location.search).has('payProfile') ? 'receive' : 'send'
   );
   const [paymentMode, setPaymentMode] = useState<'direct' | 'private'>('direct');
   const [directHandle, setDirectHandle] = useState('');
@@ -41,6 +43,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
   const [message, setMessage] = useState('A payment is waiting for you on Arc. Sent with Hopfast.');
   const [config, setConfig] = useState<ArchitectConfig>({ ready: false, chainId: 5042, rpcUrl: 'https://rpc.mainnet.arc.io', feeBps: 250 });
   const [busy, setBusy] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [claimUrl, setClaimUrl] = useState('');
@@ -48,14 +51,18 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
   const [confirmRecipient, setConfirmRecipient] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [scannerError, setScannerError] = useState('');
+  const [scannerStarting, setScannerStarting] = useState(false);
   const scannerVideo = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
-    architectApi<ArchitectConfig>('/config').then(setConfig).catch(() => setError('Payments are temporarily unavailable. Please try again shortly.'));
+    let active = true;
+    architectApi<ArchitectConfig>('/config').then(settings => { if (active) setConfig(settings); }).catch(() => { if (active) setError('Payments are temporarily unavailable. Please try again shortly.'); }).finally(() => { if (active) setConfigLoading(false); });
+    return () => { active = false; };
   }, []);
 
   useEffect(() => {
     if (!scannerOpen) return;
+    setScannerStarting(true);
     let active = true;
     let frame = 0;
     let stream: MediaStream | null = null;
@@ -64,9 +71,11 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
         const Detector = (window as unknown as { BarcodeDetector?: QrDetectorConstructor }).BarcodeDetector;
         if (!Detector) throw new Error('QR scanning is not supported in this browser. Enter the Hopfast ID instead.');
         stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-        if (!active || !scannerVideo.current) return;
+        if (!active || !scannerVideo.current) { stream.getTracks().forEach(track => track.stop()); return; }
         scannerVideo.current.srcObject = stream;
         await scannerVideo.current.play();
+        if (!active) return;
+        setScannerStarting(false);
         const detector = new Detector({ formats: ['qr_code'] });
         const scan = async () => {
           if (!active || !scannerVideo.current) return;
@@ -83,7 +92,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
         };
         void scan();
       } catch (cause) {
-        if (active) setScannerError(cause instanceof Error ? cause.message : 'Could not open the camera.');
+        if (active) { setScannerStarting(false); setScannerError(cause instanceof Error ? cause.message : 'Could not open the camera.'); }
       }
     };
     void start();
@@ -155,14 +164,15 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
   return (
     <div className="hf-support-shell">
       {claimError && <p className="hf-support-error" role="alert">X verification did not finish. Open the original claim link and sign in with the recipient’s X account.</p>}
-      <div className="hf-support-tabs" role="tablist" aria-label="Arc payment tools">
+      <div className="hf-payment-tools"><div className="hf-support-tabs" role="tablist" aria-label="Arc payment tools">
         <button className={tab === 'send' ? 'active' : ''} onClick={() => setTab('send')} role="tab" aria-selected={tab === 'send'}><img className="hf-tab-usdc" src="/token-icons/usdc.svg" alt="" /> New payment</button>
         <button className={tab === 'receive' ? 'active' : ''} onClick={() => setTab('receive')} role="tab" aria-selected={tab === 'receive'}><QrCode size={15} /> Receive</button>
         <button className={tab === 'mine' ? 'active' : ''} onClick={() => setTab('mine')} role="tab" aria-selected={tab === 'mine'}><WalletCards size={15} /> Activity</button>
-      </div>
-      {tab === 'mine' ? <ArchitectDeposits config={config} wallet={wallet} /> : tab === 'receive' ? (
-        <PaymentIdentity wallet={wallet} onConnect={onConnect} />
-      ) : profileLinkHandle ? (
+      </div><button type="button" className="hf-invoice-launch" aria-pressed={tab === 'invoices'} onClick={() => setTab('invoices')}><FileText size={16} /> Invoices</button></div>
+      <div className="hf-payment-panel" hidden={tab !== 'invoices'}><InvoiceWorkspace wallet={wallet} onConnect={onConnect} /></div>
+      <div className="hf-payment-panel" hidden={tab !== 'mine'}><ArchitectDeposits key={wallet?.address.toLowerCase() || 'disconnected'} config={config} wallet={wallet} /></div>
+      <div className="hf-payment-panel" hidden={tab !== 'receive'}><PaymentIdentity wallet={wallet} onConnect={onConnect} /></div>
+      {tab === 'send' && (profileLinkHandle ? (
         <ProfilePayment
           handle={profileLinkHandle}
           wallet={wallet}
@@ -199,6 +209,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
                   <div className="hf-qr-scanner-head"><span><QrCode size={15} /> Scan Hopfast QR</span><button type="button" onClick={() => setScannerOpen(false)} aria-label="Close QR scanner"><X size={16} /></button></div>
                   <div className="hf-qr-camera"><video ref={scannerVideo} playsInline muted /><span aria-hidden="true" /></div>
                   <p>Point the camera at a Hopfast payment QR code.</p>
+                  {scannerStarting && <small role="status"><LoadingSpinner size={14} /> Opening camera…</small>}
                   {scannerError && <small role="alert">{scannerError}</small>}
                 </div>
               )}
@@ -225,7 +236,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
                 <small id="recipient-confirmation-note">If the username is incorrect or the payment is not claimed, you can reclaim the funds after 30 days.</small>
                 <div className="hf-recipient-confirmation-actions">
                   <button className="hf-support-secondary" type="button" disabled={busy} onClick={() => setConfirmRecipient(false)}><X size={15} /> No, go back</button>
-                  <button className="hf-support-primary" type="button" disabled={busy} onClick={() => void fund()}>{busy ? 'Waiting for wallet approval…' : 'Yes, continue'} <Check size={15} /></button>
+                  <button className="hf-support-primary" type="button" disabled={busy} onClick={() => void fund()}>{busy ? 'Waiting for wallet approval…' : 'Yes, continue'} {busy ? <LoadingSpinner size={15} /> : <Check size={15} />}</button>
                 </div>
               </div>
             ) : <>
@@ -239,7 +250,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
               <textarea id="envelope-message" disabled={busy || !!pending} maxLength={280} rows={4} value={message} onChange={(event) => setMessage(event.target.value)} />
               <div className="hf-support-count">{message.length}/280</div>
               <dl className="hf-support-fees"><div><dt>Your friend receives</dt><dd>{amounts?.amount ?? '—'} USDC</dd></div><div><dt>Platform fee</dt><dd>{amounts?.fee ?? '—'} USDC</dd></div><div><dt>You pay</dt><dd>{amounts?.total ?? '—'} USDC</dd></div></dl>
-              <button className="hf-support-primary" type="submit" disabled={busy || !config.ready || !validHandle || !amounts || !message.trim()}>{busy ? 'Waiting for wallet approval…' : wallet ? 'Fund private payment' : 'Connect wallet to continue'} <Send size={15} /></button>
+              <button className="hf-support-primary" type="submit" disabled={busy || configLoading || !config.ready || !validHandle || !amounts || !message.trim()}>{configLoading ? 'Preparing payments…' : busy ? 'Waiting for wallet approval…' : wallet ? 'Fund private payment' : 'Connect wallet to continue'} {busy || configLoading ? <LoadingSpinner size={15} /> : <Send size={15} />}</button>
               <button className="hf-support-secondary" type="button" onClick={onBack}>Need USDC? Bridge to Arc</button>
               <small className="hf-support-disclosure">Hopfast deducts 2.5% when you deposit. The recipient receives the amount shown above. The fee is not refunded if you later reclaim. Network gas is separate.</small>
             </> : (
@@ -251,7 +262,7 @@ export function AgentView({ onBack, initialHandle = '', wallet = null, onConnect
         </div>
         )}
         </>
-      )}
+      ))}
     </div>
   );
 }

@@ -60,7 +60,8 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
       new URLSearchParams(window.location.search).has("envelope") ||
       new URLSearchParams(window.location.search).has("claimError") ||
       new URLSearchParams(window.location.search).has("pay") ||
-      new URLSearchParams(window.location.search).has("payProfile"),
+      new URLSearchParams(window.location.search).has("payProfile") ||
+      new URLSearchParams(window.location.search).has("invoice"),
   );
   const [envelopeHandle] = useState(
     () => new URLSearchParams(window.location.search).get("pay") ?? "",
@@ -411,7 +412,7 @@ function AppContent({ privyAuth }: { privyAuth: AuthState }) {
             setSupportOpen(false);
             setView("human");
             if (
-              ["envelope", "pay", "payProfile", "claimError"].some((key) =>
+              ["envelope", "pay", "payProfile", "claimError", "invoice"].some((key) =>
                 new URLSearchParams(window.location.search).has(key),
               )
             ) {
