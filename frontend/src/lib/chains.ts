@@ -1,6 +1,6 @@
 export const NATIVE_TOKEN_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
 
-export type ChainKey = 'base' | 'bsc' | 'ethereum' | 'polygon' | 'monad' | 'arc';
+export type ChainKey = 'base' | 'bsc' | 'ethereum' | 'polygon' | 'monad' | 'robinhood' | 'arc';
 
 export interface TokenOption {
   symbol: string;
@@ -261,18 +261,18 @@ const MONAD_TOKENS: TokenOption[] = [
     logoURI: '/token-icons/mon.png'
   },
   {
-    symbol: 'WMON',
-    name: 'Wrapped Monad',
-    address: '0x3bd359c1119da7da1d913d1c4d2b7c461115433a',
-    decimals: 18,
-    logoURI: '/token-icons/mon.png'
+    symbol: 'USDC',
+    name: 'USD Coin',
+    address: '0x754704bc059f8c67012fed69bc8a327a5aafb603',
+    decimals: 6,
+    logoURI: '/token-icons/usdc.svg'
   },
   {
-    symbol: 'WETH',
-    name: 'Wrapped Ether',
-    address: '0xEE8c0E9f1BFFb4Eb878d8f15f368A02a35481242',
-    decimals: 18,
-    logoURI: '/token-icons/weth.png'
+    symbol: 'cbBTC',
+    name: 'Coinbase Wrapped BTC',
+    address: '0xd18b7ec58cdf4876f6afebd3ed1730e4ce10414b',
+    decimals: 8,
+    logoURI: '/token-icons/cbbtc.png'
   },
   {
     symbol: 'WBTC',
@@ -283,11 +283,20 @@ const MONAD_TOKENS: TokenOption[] = [
   }
 ];
 
+const ROBINHOOD_TOKENS: TokenOption[] = [
+  { symbol: 'ETH', name: 'Ether', address: NATIVE_TOKEN_ADDRESS, decimals: 18, logoURI: '/token-icons/eth.svg' },
+  { symbol: 'USDG', name: 'Global Dollar', address: '0x5fc5360d0400a0fd4f2af552add042d716f1d168', decimals: 6, logoURI: '/token-icons/usdg.png' }
+];
+
 export const ARC_USDC_ADDRESS = '0x3600000000000000000000000000000000000000';
 export const CHAINS: ChainOption[] = [
   {
     key: 'arc', name: 'Arc', chainId: 5042, logoURI: '/brand/arc-network.svg',
-    tokens: [{ symbol: 'USDC', name: 'USD Coin', address: ARC_USDC_ADDRESS, decimals: 6, logoURI: '/token-icons/usdc.svg' }]
+    tokens: [
+      { symbol: 'USDC', name: 'USD Coin', address: ARC_USDC_ADDRESS, decimals: 6, logoURI: '/token-icons/usdc.svg' },
+      { symbol: 'cirBTC', name: 'Circle Wrapped Bitcoin', address: '0x171a4217b86a807a64eb94757db6849fb4bdbaa0', decimals: 8, logoURI: '/token-icons/cirbtc.png' },
+      { symbol: 'EURC', name: 'Euro Coin', address: '0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1', decimals: 6, logoURI: '/token-icons/eurc.png' }
+    ]
   },
   {
     key: 'ethereum',
@@ -323,6 +332,10 @@ export const CHAINS: ChainOption[] = [
     chainId: 143,
     logoURI: '/chains/monad.png',
     tokens: MONAD_TOKENS
+  },
+  {
+    key: 'robinhood', name: 'Robinhood Chain', chainId: 4663,
+    logoURI: '/chains/robinhood.png', tokens: ROBINHOOD_TOKENS
   }
 ];
 

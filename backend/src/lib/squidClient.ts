@@ -5,7 +5,7 @@ import {
   assertValidSender,
 } from './recipientGuard.js';
 
-type ChainKey = 'ethereum' | 'base' | 'bsc' | 'polygon' | 'monad' | 'arc';
+type ChainKey = 'ethereum' | 'base' | 'bsc' | 'polygon' | 'monad' | 'robinhood' | 'arc';
 
 interface UnifiedQuotePayload {
   srcChainKey?: string;
@@ -28,6 +28,7 @@ const CHAIN_ID_BY_KEY: Record<ChainKey, number> = {
   bsc: 56,
   polygon: 137,
   monad: 143,
+  robinhood: 4663,
   arc: 5042,
 };
 

@@ -92,11 +92,6 @@ export function TokenSelector({
               </p>
             )}
           </div>
-          {chain.key === 'arc' && (
-            <p className="hf-dialog-note">
-              USDC powers payments and gas on Arc. One asset, one balance.
-            </p>
-          )}
         </Dialog>
       )}
       {chainModalOpen && (

@@ -31,7 +31,8 @@ export const BLOCK_EXPLORER: Record<ChainKey, string> = {
   base: 'https://basescan.org/tx/',
   bsc: 'https://bscscan.com/tx/',
   polygon: 'https://polygonscan.com/tx/',
-  monad: 'https://monadscan.com/tx/'
+  monad: 'https://monadscan.com/tx/',
+  robinhood: 'https://robin.etherscan.io/tx/'
 };
 
 export const TX_STAGES: { key: TxStage; label: string }[] = [

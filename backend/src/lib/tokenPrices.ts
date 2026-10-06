@@ -7,6 +7,9 @@ const SYMBOL_TO_CG_ID: Record<string, string> = {
   WETH:    'weth',
   BNB:     'binancecoin',
   USDC:    'usd-coin',
+  USDG:    'global-dollar',
+  EURC:    'euro-coin',
+  cirBTC:  'circle-wrapped-btc',
   USDT:    'tether',
   DAI:     'dai',
   WBTC:    'wrapped-bitcoin',
@@ -82,7 +85,7 @@ async function fetchViaCMC(apiKey: string): Promise<Record<string, number>> {
 
   if (body.data) {
     for (const symbol of ALL_SYMBOLS) {
-      const price = body.data[symbol]?.quote?.USD?.price;
+      const price = (body.data[symbol] ?? body.data[symbol.toUpperCase()])?.quote?.USD?.price;
       if (typeof price === 'number' && Number.isFinite(price)) {
         prices[symbol] = price;
       }
@@ -143,4 +146,3 @@ export async function getTokenPrices(): Promise<Record<string, number>> {
 
   return inflightPromise;
 }
-

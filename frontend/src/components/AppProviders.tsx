@@ -13,6 +13,14 @@ const arc = defineChain({
   },
 });
 
+const robinhood = defineChain({
+  id: 4663,
+  name: 'Robinhood Chain',
+  nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+  rpcUrls: { default: { http: ['https://rpc.mainnet.chain.robinhood.com'] } },
+  blockExplorers: { default: { name: 'Robinhood Explorer', url: 'https://robin.etherscan.io' } },
+});
+
 const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID;
 
 export function AppProviders({ children }: { children: ReactNode }) {
@@ -26,7 +34,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
       config={{
         loginMethods: ['wallet'],
         defaultChain: base,
-        supportedChains: [arc, mainnet, base, bsc, polygon, monad],
+        supportedChains: [arc, mainnet, base, bsc, polygon, monad, robinhood],
         appearance: {
           theme: 'light',
           accentColor: '#1B3158',

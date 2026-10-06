@@ -45,7 +45,7 @@ export async function requestProvider(
     inFlightQuotes.delete(key);
   }
 }
-const chain = z.enum(['ethereum', 'base', 'bsc', 'polygon', 'monad', 'arc']);
+const chain = z.enum(['ethereum', 'base', 'bsc', 'polygon', 'monad', 'robinhood', 'arc']);
 const comparisonSchema = z.object({
   srcChainKey: chain,
   dstChainKey: chain,
