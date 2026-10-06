@@ -589,19 +589,6 @@ textarea:focus-visible {
   object-fit: cover;
   object-position: center;
 }
-.hf-upi-story-credit {
-  position: absolute;
-  bottom: 15px;
-  left: 15px;
-  padding: 7px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  border-radius: 10px;
-  background: rgba(20, 39, 62, 0.57);
-  color: #fff;
-  font-size: 10px;
-  text-decoration: none;
-  backdrop-filter: blur(12px);
-}
 .hf-upi-story-copy {
   display: flex;
   flex-direction: column;
@@ -3443,6 +3430,18 @@ textarea:focus-visible {
 .hf-payment-panel[hidden] { display:none !important; }
 
 .hf-invoice-launch { position:relative; overflow:visible; }
+/* One-time reveals use only opacity and transform; content needs no animation to load. */
+.hf-product-home .hf-scroll-reveal { opacity:0; transform:translateY(18px); transition:opacity .55s ease var(--hf-reveal-delay,0ms),transform .65s cubic-bezier(.22,1,.36,1) var(--hf-reveal-delay,0ms); }
+.hf-product-home .hf-scroll-reveal.hf-reveal-visible { opacity:1; transform:translateY(0); }
+.hf-product-home :is(.hf-product-card,.hf-control-grid > article,.hf-payment-journey > li,.hf-freelancer-main,.hf-freelancer-steps > li,.hf-product-final) {
+  background:linear-gradient(135deg,rgba(255,255,255,.78),rgba(231,242,255,.58));
+  border-color:rgba(255,255,255,.92);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.95),inset 0 -1px 0 rgba(112,160,211,.08),0 18px 45px -32px rgba(40,78,126,.32);
+}
+@supports (backdrop-filter:blur(8px)) {
+  .hf-product-home :is(.hf-product-card,.hf-freelancer-main,.hf-product-final) { backdrop-filter:blur(8px) saturate(115%); }
+}
+@media(prefers-reduced-motion:reduce) { .hf-product-home .hf-scroll-reveal { opacity:1; transform:none; transition:none; } }
 .hf-invoice-symbol-art { width:92px; height:92px; border-radius:27px; background:linear-gradient(145deg,#fffdf8,#ffe8d2); box-shadow:inset 0 1px 0 #fff,0 12px 24px -18px #be622a66; }
 .hf-invoice-symbol-art > svg { width:86px; height:86px; overflow:visible; }
 .hf-invoice-launch-group { margin-left:auto; display:flex; flex-direction:column; align-items:center; gap:6px; flex-shrink:0; }

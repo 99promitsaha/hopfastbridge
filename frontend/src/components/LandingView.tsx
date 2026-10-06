@@ -13,7 +13,7 @@ import {
   ShieldCheck,
   UserRound,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   architectApi,
   type ArchitectConfig,
@@ -28,9 +28,42 @@ export function LandingView({
   onPayAnyone: () => void;
   onInvoices: () => void;
 }) {
+  const homeRef = useRef<HTMLDivElement>(null);
   const [paymentsStatus, setPaymentsStatus] = useState<
     "checking" | "live" | "offline"
   >("checking");
+
+  useEffect(() => {
+    const home = homeRef.current;
+    if (!home || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const tiles = Array.from(home.querySelectorAll<HTMLElement>(
+      '.hf-upi-story, .hf-product-duo > header, .hf-product-card, .hf-freelancer-main, .hf-freelancer-steps > li, .hf-product-journey > header, .hf-payment-journey > li, .hf-product-control > header, .hf-control-grid > article, .hf-identity-story, .hf-identity-bento > article, .hf-product-final'
+    ));
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(({ target, isIntersecting }) => {
+        if (!isIntersecting) return;
+        target.classList.add('hf-reveal-visible');
+        observer.unobserve(target);
+      });
+    }, { threshold: 0, rootMargin: '0px 0px -24px 0px' });
+    tiles.forEach((tile) => {
+      // Content already on screen stays visible, including restored scroll positions.
+      if (tile.getBoundingClientRect().top < window.innerHeight) return;
+      const siblings = Array.from(tile.parentElement?.children || []);
+      tile.style.setProperty('--hf-reveal-delay', `${Math.min(siblings.indexOf(tile), 3) * 45}ms`);
+      tile.classList.add('hf-scroll-reveal');
+      observer.observe(tile);
+    });
+    const revealFocusedTile = (event: FocusEvent) => {
+      if (event.target instanceof Element) event.target.closest('.hf-scroll-reveal')?.classList.add('hf-reveal-visible');
+    };
+    home.addEventListener('focusin', revealFocusedTile);
+    return () => {
+      observer.disconnect();
+      home.removeEventListener('focusin', revealFocusedTile);
+      tiles.forEach((tile) => { tile.classList.remove('hf-scroll-reveal', 'hf-reveal-visible'); tile.style.removeProperty('--hf-reveal-delay'); });
+    };
+  }, []);
 
   useEffect(() => {
     architectApi<ArchitectConfig>("/config")
@@ -39,7 +72,7 @@ export function LandingView({
   }, []);
 
   return (
-    <div className="hf-home hf-home-redesign hf-product-home">
+    <div ref={homeRef} className="hf-home hf-home-redesign hf-product-home">
       <section className="hf-product-hero" aria-labelledby="home-title">
         <div className="hf-product-hero-copy">
           <h1 id="home-title">
@@ -147,19 +180,11 @@ export function LandingView({
       <section className="hf-upi-story" aria-labelledby="upi-story-title">
         <div className="hf-upi-story-photo">
           <img
-            src="https://images.pexels.com/photos/13326556/pexels-photo-13326556.jpeg?auto=compress&cs=tinysrgb&w=1600"
-            alt="A shopkeeper at his small stall in Maharashtra, with a payment QR stand on the counter."
+            src="/brand/upi.jpg"
+            alt="A PhonePe UPI payment QR stand among fruit at an Indian market stall."
             loading="lazy"
             decoding="async"
           />
-          <a
-            href="https://www.pexels.com/photo/man-sitting-inside-a-store-13326556/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hf-upi-story-credit"
-          >
-            Photo: Ankit Rainloure / Pexels
-          </a>
         </div>
         <div className="hf-upi-story-copy">
           <h2 id="upi-story-title">A small shop taught us what payments should feel like.</h2>
