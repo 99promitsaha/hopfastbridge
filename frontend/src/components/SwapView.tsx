@@ -800,7 +800,7 @@ export function SwapView({
                   <>Connect wallet to bridge</>
                 ) : bestQuote && !isQuoting ? (
                   <>
-                    Review route <ArrowRight size={17} />
+                    Swap now <ArrowRight size={17} />
                   </>
                 ) : isQuoting ? (
                   <>

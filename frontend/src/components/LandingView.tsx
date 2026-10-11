@@ -1,4 +1,5 @@
 import { InvoiceLandingSection } from './InvoiceLandingSection';
+import { WhatsNew } from './WhatsNew';
 import {
   ArrowRight,
   AtSign,
@@ -225,7 +226,7 @@ export function LandingView({
                 <Globe2 size={20} />
               </span>
               <span className="hf-product-status">
-                <i /> Live routing
+                <i /> Live Providers
               </span>
             </div>
             <div>
@@ -307,7 +308,7 @@ export function LandingView({
               <span className="hf-product-status">
                 <i className={paymentsStatus === "live" ? "" : "is-waiting"} />{" "}
                 {paymentsStatus === "live"
-                  ? "Payments live"
+                  ? "Settle with USDC"
                   : paymentsStatus === "checking"
                     ? "Checking payments"
                     : "Payments unavailable"}
@@ -509,6 +510,7 @@ export function LandingView({
           </button>
         </div>
       </section>
+      <WhatsNew onBridge={onBridge} onPayAnyone={onPayAnyone} onInvoices={onInvoices} />
     </div>
   );
 }

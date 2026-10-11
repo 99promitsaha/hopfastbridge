@@ -1,0 +1,111 @@
+.hf-whats-new {
+  position: fixed;
+  z-index: 45;
+  right: max(24px, env(safe-area-inset-right));
+  bottom: max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  color: var(--hf-text-primary);
+  font-family: var(--hf-font-body, inherit);
+}
+.hf-whats-new button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.hf-whats-new button:focus-visible {
+  outline: 2px solid var(--hf-secondary);
+  outline-offset: 3px;
+}
+.hf-whats-new-launcher {
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 50px;
+  background: rgba(248, 252, 255, 0.95);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 8px 30px -12px rgba(23, 59, 107, 0.35), inset 0 0 0 1px var(--hf-border);
+}
+.hf-whats-new .hf-whats-new-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 30px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 650;
+}
+.hf-whats-new-trigger > svg { color: var(--hf-secondary); }
+.hf-whats-new .hf-whats-new-dismiss,
+.hf-whats-new .hf-whats-new-icon-button {
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--hf-text-secondary);
+}
+.hf-whats-new-dismiss:hover,
+.hf-whats-new-icon-button:hover,
+.hf-whats-new-trigger:hover { background: rgba(62, 115, 196, 0.08); }
+.hf-whats-new-panel {
+  width: min(360px, calc(100vw - 32px));
+  max-height: calc(100dvh - 112px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  border-radius: 25px;
+  background: rgba(248, 252, 255, 0.97);
+  backdrop-filter: blur(22px);
+  box-shadow: 0 18px 60px -22px rgba(23, 59, 107, 0.35), inset 0 0 0 1px var(--hf-border);
+  animation: hf-whats-new-enter 180ms ease-out;
+}
+.hf-whats-new-header { display: flex; align-items: flex-start; gap: 12px; }
+.hf-whats-new-header > div { flex: 1; }
+.hf-whats-new-header h2 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: -0.035em; line-height: 1.3; }
+.hf-whats-new-header p { margin: 7px 0 16px; color: var(--hf-text-secondary); font-size: 12px; line-height: 1.5; }
+.hf-whats-new .hf-whats-new-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 15px 0;
+  border: 0;
+  border-top: 1px solid var(--hf-border);
+  background: transparent;
+  text-align: left;
+}
+.hf-whats-new-item:last-child { padding-bottom: 3px; }
+.hf-whats-new-item-icon {
+  display: grid;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 12px;
+  background: #e8f1fd;
+  color: var(--hf-secondary);
+}
+.hf-whats-new-item-icon img { width: 24px; height: 24px; border-radius: 7px; }
+.hf-whats-new-item-icon--invoice { color: #bf5b18; background: #fff0e2; }
+.hf-whats-new-item-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; gap: 5px; }
+.hf-whats-new-item-copy strong { font-size: 13px; font-weight: 650; line-height: 1.4; }
+.hf-whats-new-item-copy > span { color: var(--hf-text-secondary); font-size: 12px; line-height: 1.55; }
+.hf-whats-new-item > svg { flex-shrink: 0; margin-top: 3px; color: var(--hf-text-muted); }
+button.hf-whats-new-item:hover .hf-whats-new-item-copy strong { color: var(--hf-secondary); }
+@keyframes hf-whats-new-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 760px) {
+  .hf-whats-new { right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) { .hf-whats-new-panel { animation: none; } }

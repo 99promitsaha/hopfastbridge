@@ -27,7 +27,7 @@ export function InvoiceLandingSection({ onCreate }: { onCreate: () => void }) {
     <ol className="hf-freelancer-steps">
       <li><span className="hf-freelancer-step-number">1</span><div><h3>Create your invoice.</h3><p>Add your client, line items, quantities, rates and due date. Review the breakdown before publishing with your Hopfast ID.</p></div></li>
       <li><span className="hf-freelancer-step-number">2</span><div><h3>Share it with your client.</h3><p>They see the invoice details and total, connect their wallet, and approve the USDC payment on Arc.</p></div></li>
-      <li><span className="hf-freelancer-step-number">3</span><div><h3>Release USDC to your wallet.</h3><p>Track the invoice from open to funded. Release the escrowed payment to your wallet and download a receipt once settled.</p></div></li>
+      <li><span className="hf-freelancer-step-number">3</span><div><h3>Claim USDC to your wallet.</h3><p>Track the invoice from open to funded. Release the escrowed payment to your wallet and download a receipt once settled.</p></div></li>
     </ol>
   </section>;
 }
