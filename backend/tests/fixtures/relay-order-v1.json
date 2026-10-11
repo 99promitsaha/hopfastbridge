@@ -1,0 +1,52 @@
+{
+  "orderId": "0xe3bc63f48567f056bc156245a534a5a55a0482e36758ee0b689d812b9becabba",
+  "orderData": {
+    "version": "v1",
+    "solverChainId": "base",
+    "solver": "0xf70da97812cb96acdf810712aa562db8dfa3dbef",
+    "salt": "0x56df713a198158bc8372334dbd2e288dda1db9db6a9606fe91818b430ddfe734",
+    "inputs": [
+      {
+        "payment": {
+          "chainId": "base",
+          "currency": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+          "amount": "100000000",
+          "weight": "1"
+        },
+        "refunds": [
+          {
+            "chainId": "base",
+            "recipient": "0xe7953857d0dBA2d39B6Fb8e63296e408058120F4",
+            "currency": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+            "minimumAmount": "0",
+            "deadline": 1792327291,
+            "extraData": "0x000000000000000000000000b92fe925dc43a0ecde6c8b1a2709c170ec4fff4f"
+          },
+          {
+            "chainId": "arc",
+            "recipient": "0xe7953857d0dBA2d39B6Fb8e63296e408058120F4",
+            "currency": "0x3600000000000000000000000000000000000000",
+            "minimumAmount": "0",
+            "deadline": 1792327291,
+            "extraData": "0x000000000000000000000000b92fe925dc43a0ecde6c8b1a2709c170ec4fff4f"
+          }
+        ]
+      }
+    ],
+    "output": {
+      "chainId": "arc",
+      "payments": [
+        {
+          "recipient": "0xe7953857d0dBA2d39B6Fb8e63296e408058120F4",
+          "currency": "0x3600000000000000000000000000000000000000",
+          "minimumAmount": "97920143",
+          "expectedAmount": "99918513"
+        }
+      ],
+      "calls": [],
+      "deadline": 1792327291,
+      "extraData": "0x000000000000000000000000b92fe925dc43a0ecde6c8b1a2709c170ec4fff4f"
+    },
+    "fees": []
+  }
+}

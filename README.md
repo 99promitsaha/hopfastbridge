@@ -29,7 +29,7 @@ Users sign their own transfers, bridges, approvals, deposits, and claims. Direct
 
 | Product | What it does | Settlement |
 | --- | --- | --- |
-| Bridge to Arc | Compares executable LI.FI and Squid routes and presents the best available options | The selected provider routes funds to the connected Arc wallet |
+| Bridge to Arc | Compares executable LI.FI, Squid and Relay routes and presents the best available options | The selected provider routes funds to the connected Arc wallet |
 | Hopfast ID | Connects a verified X identity to an Arc wallet, personal payment link, and QR code | Direct wallet-to-wallet USDC transfer on Arc |
 | Pay an X username | Creates a private payment for a specific X account without requiring its wallet address first | Funds remain in the Hopfast escrow until the matching X account claims them |
 | Payment activity | Separates direct Hopfast ID transfers from private X username payments | Status and explorer links remain available after signing |
@@ -41,13 +41,15 @@ Users sign their own transfers, bridges, approvals, deposits, and claims. Direct
 ### Bridge USDC to Arc
 
 1. Connect a wallet and choose the source chain, token, and amount.
-2. Hopfast requests LI.FI and Squid quotes in parallel.
+2. Hopfast requests LI.FI, Squid and Relay quotes in parallel.
 3. Providers that do not return an executable route are hidden.
 4. The user compares output, duration, provider costs, and the included Hopfast fee where applicable.
 5. The wallet signs the selected provider transaction.
 6. Hopfast tracks the source transaction and destination settlement, with explorer links when available.
 
-Quotes refresh every 20 seconds. A partial provider outage does not remove a valid quote returned by the other provider. The backend validates sender and recipient addresses and rejects provider calldata that does not contain the requested destination recipient.
+Quotes refresh every 20 seconds. A partial provider outage does not remove valid quotes from other providers. LI.FI and Squid use the existing recipient calldata guard. Relay uses a separate settlement-order verifier: it recomputes the order commitment and checks the payer, destination wallet, both chains, token contracts, exact input, minimum output and refund recipient. Its deposit must target the independently pinned Relay depository and match the verified order exactly. The frontend revalidates the route with the backend before approval and checks the connected account and network again before depositing.
+
+Relay currently supports canonical native/ERC-20 deposits only. Origin swaps through routers, permits, arbitrary transfers, destination calls and multi-transaction routes are rejected. Unsupported or unavailable quotes stay hidden; LI.FI and Squid remain available. Wallets estimate gas themselves and token approvals use the exact input amount.
 
 ### Pay a Hopfast ID
 
@@ -116,6 +118,7 @@ Invoice checkout fails closed until the backend verifies the deployed contract's
 - **Direct Hopfast ID payment:** Hopfast does not add a platform fee. Arc network cost still applies.
 - **LI.FI route:** the integration requests a 0.05% Hopfast integrator fee when portal configuration confirms that fee. It remains part of the provider quote and is never added a second time by Hopfast.
 - **Squid route:** Hopfast currently adds no custom integrator fee. Provider and network costs can still apply.
+- **Relay route:** the backend requests five basis points using Relay's `appFees`. This is included in the quote, not added again to the transaction amount. Relay accrues app fees offchain for `RELAY_FEE_RECIPIENT`; the wallet claims them through [Relay's app-fee claim page](https://relay.link/claim-app-fees). They are not automatically sent to the wallet after every swap. See [Relay app fees](https://docs.relay.link/features/app-fees).
 
 Every executable quote shows the costs returned by its provider before the user signs.
 
@@ -143,7 +146,7 @@ The frontend never receives server credentials or signing keys. Provider credent
 - Solidity 0.8, OpenZeppelin Contracts, ethers, and solc
 - MongoDB for identities, private payment metadata, and bridge activity
 - A persistent private JSON store for direct payment review and receipt tracking
-- LI.FI and Squid for route discovery and cross-chain status
+- LI.FI, Squid and Relay for route discovery and cross-chain status
 - X OAuth 2.0 with PKCE for recipient and Hopfast ID verification
 
 ## Local development
@@ -182,6 +185,9 @@ The application starts with safe local defaults, but individual features require
 | `LIFI_INTEGRATOR` | LI.FI portal integrator string |
 | `LIFI_FEE` | Decimal LI.FI integrator fee, currently `0.0005` for five basis points |
 | `SQUID_INTEGRATOR_ID` | Squid integrator identifier |
+| `RELAY_API_KEY` | Server-only Relay dashboard key; required for production quoting |
+| `RELAY_FEE_RECIPIENT` | Wallet entitled to claim Relay app fees; defaults to the configured project owner address |
+| `RELAY_SLIPPAGE_BPS` | Relay minimum-output tolerance in basis points; defaults to `50` (0.5%), maximum `200` |
 | `X_CLIENT_ID` and `X_CLIENT_SECRET` | X OAuth web application credentials |
 | `X_BEARER_TOKEN` | Server-side X user lookup credential |
 | `X_CALLBACK_URL` | Exact callback registered in the X developer application |
@@ -196,6 +202,8 @@ The application starts with safe local defaults, but individual features require
 | `COINGECKO_API_KEY` or `CMC_API_KEY` | Optional server-side token price source |
 
 Never put a private key, database credential, provider secret, or OAuth secret in a `VITE_*` variable. Vite variables are included in the browser bundle.
+
+Relay needs no additional frontend environment variable. Configure its key only on the backend. The local execution-ticket cache expires within two minutes and holds at most 1,000 quotes; a backend restart requires a fresh quote. The adapter also limits upstream quote calls to 45 per minute per process, below Relay's documented default key quota of 50. The existing per-IP quote limit still applies. Multiple backend instances sharing one key need a shared limiter and ticket store before scaling beyond one process. See [Relay API keys](https://docs.relay.link/references/api/api-keys) and [input validation](https://docs.relay.link/references/api/api_core_concepts/input-validation).
 
 ### Activate invoice checkout
 

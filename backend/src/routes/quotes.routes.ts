@@ -10,6 +10,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { requestLiFiQuote } from '../lib/lifiClient.js';
 import { requestSquidQuote } from '../lib/squidClient.js';
+import { requestRelayQuote, relayExecutionQuote } from '../lib/relayClient.js';
 import { env } from '../config/env.js';
 
 const router = Router();
@@ -35,7 +36,7 @@ export async function requestProvider(
   const key = `${provider}:${JSON.stringify(payload)}`;
   const existing = inFlightQuotes.get(key);
   if (existing) return existing;
-  const request = provider === 'squid'
+  const request = provider === 'relay' ? requestRelayQuote(payload) : provider === 'squid'
     ? requestSquidQuote(payload)
     : requestLiFiQuote(payload);
   inFlightQuotes.set(key, request);
@@ -59,9 +60,9 @@ const comparisonSchema = z.object({
     .max(78)
     .refine((value) => BigInt(value) > 0n && BigInt(value) < 2n ** 256n),
   providers: z
-    .array(z.enum(['lifi', 'squid']))
+    .array(z.enum(['lifi', 'squid', 'relay']))
     .min(1)
-    .max(2)
+    .max(3)
     .optional(),
   maxFeeUsd: z.number().finite().nonnegative().optional(),
   maxEtaSeconds: z.number().finite().positive().optional(),
@@ -93,13 +94,23 @@ router.post('/quotes/compare', quoteLimiter, async (req, res) => {
     warning: 'Estimates can change before signing.',
   });
 });
+// Recheck a server-validated, short-lived quote immediately before approval/signing.
+router.post('/quotes/relay/validate', quoteLimiter, (req, res) => {
+  const parsed = comparisonSchema.safeParse(req.body);
+  if (!parsed.success || typeof req.body.requestId !== 'string') return res.status(400).json({ error: 'Invalid Relay execution request.' });
+  try {
+    return res.json(relayExecutionQuote(req.body.requestId, parsed.data));
+  } catch (error) {
+    return res.status(400).json({ error: error instanceof Error ? error.message : 'Relay quote expired. Refresh quotes.' });
+  }
+});
 
 router.post('/quotes', quoteLimiter, async (req, res) => {
   const requestedProvider =
     typeof req.query.provider === 'string'
       ? req.query.provider.toLowerCase()
       : undefined;
-  const supportedProviders = ['lifi', 'squid'] as const;
+  const supportedProviders = providers;
 
   if (
     requestedProvider &&
@@ -114,26 +125,19 @@ router.post('/quotes', quoteLimiter, async (req, res) => {
 
   const provider = requestedProvider ?? 'lifi';
 
-  const { srcChainKey, dstChainKey, srcTokenAddress, dstTokenAddress, amount } =
-    req.body ?? {};
-  if (!srcTokenAddress || !dstTokenAddress || !amount) {
+  const parsed = comparisonSchema.safeParse(req.body);
+  if (!parsed.success) {
     return res
       .status(400)
       .json({
-        error:
-          'Missing required fields: srcTokenAddress, dstTokenAddress, amount.',
-      });
-  }
-  if (typeof amount !== 'string' || !/^\d+$/.test(amount)) {
-    return res
-      .status(400)
-      .json({
-        error: 'Amount must be a numeric string in smallest token units.',
+        error: 'Invalid quote request. Connect a wallet and select supported chains, tokens and a positive base-unit amount.',
       });
   }
 
   try {
-    const quote = await requestProvider(provider as Provider, req.body);
+    // Only pass schema-validated route fields. Provider options stay bounded by
+    // their own clients; Relay fees/recipients can never be overridden by a caller.
+    const quote = await requestProvider(provider as Provider, { ...parsed.data, options: req.body.options });
 
     return res.json(quote);
   } catch (error) {

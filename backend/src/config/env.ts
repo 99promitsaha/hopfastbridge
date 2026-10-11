@@ -34,6 +34,9 @@ const schema = z.object({
   LIFI_SLIPPAGE: z.coerce.number().default(0.005),
   SQUID_API_BASE_URL: z.string().default('https://v2.api.squidrouter.com'),
   SQUID_INTEGRATOR_ID: z.preprocess(emptyToUndefined, z.string().optional()),
+  RELAY_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
+  RELAY_FEE_RECIPIENT: z.string().regex(/^0x[0-9a-fA-F]{40}$/).default('0xe7953857d0dBA2d39B6Fb8e63296e408058120F4'),
+  RELAY_SLIPPAGE_BPS: z.coerce.number().int().min(1).max(200).default(50),
   COINGECKO_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   CMC_API_KEY: z.preprocess(emptyToUndefined, z.string().optional())
 });

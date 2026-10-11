@@ -1,5 +1,6 @@
 import { type ChainKey, getToken } from '../lib/chains';
 import { formatUnits, parseUnits } from '../lib/amount';
+import type { ProviderKey } from '../types';
 
 const NULL_ADDRESS = '0x0000000000000000000000000000000000000000';
 
@@ -14,7 +15,13 @@ export interface QuoteRequest {
 
 export interface QuoteResult {
   id: string;
-  provider: 'lifi-api' | 'squid-api' | 'mock';
+  provider: 'lifi-api' | 'squid-api' | 'relay-api' | 'mock';
+  context?: {
+    fromChainId: number; toChainId: number; sender: string; recipient: string;
+    amount: string; srcToken: string; dstToken: string;
+  };
+  expiresAt?: number;
+  relayOrderId?: string;
   route: string;
   feeUsd: number;
   networkFeeUsd?: number;
@@ -51,7 +58,8 @@ function parseAmountFromQuote(value: unknown, decimals: number): string {
   }
 
   try {
-    return formatUnits(BigInt(value), decimals, 6);
+    // Keep full token precision for ranking; UI formatting happens at render time.
+    return formatUnits(BigInt(value), decimals, decimals);
   } catch {
     return '0';
   }
@@ -118,7 +126,7 @@ async function fetchQuoteFromBackend(
 
 export async function getSwapQuote(
   request: QuoteRequest,
-  provider: 'lifi' | 'squid' = 'lifi'
+  provider: ProviderKey = 'lifi'
 ): Promise<QuoteResult> {
   if (
     request.fromChain === request.toChain &&
@@ -161,13 +169,16 @@ export async function getSwapQuote(
 
   try {
     const data = (await fetchQuoteFromBackend(payload, provider)) as {
-      provider?: 'lifi' | 'squid';
+      provider?: ProviderKey;
       fallbackUsed?: boolean;
       fallbackFrom?: string;
       warnings?: string[];
       quotes?: Array<{
         id: string;
-        provider?: 'lifi' | 'squid';
+        provider?: ProviderKey;
+        context?: QuoteResult['context'];
+        expiresAt?: number;
+        relayOrderId?: string;
         routeSteps?: Array<{ type?: string }>;
         feeUsd?: string;
         networkFeeUsd?: string;
@@ -232,7 +243,10 @@ export async function getSwapQuote(
 
     return {
       id: quote.id,
-      provider: provider === 'squid' ? 'squid-api' : 'lifi-api',
+      provider: `${provider}-api` as QuoteResult['provider'],
+      context: quote.context,
+      expiresAt: quote.expiresAt,
+      relayOrderId: quote.relayOrderId,
       route,
       feeUsd: numberFromUnknown(quote.feeUsd, 0),
       networkFeeUsd:
@@ -254,7 +268,7 @@ export async function getSwapQuote(
       warning: combinedWarning || undefined,
       raw: quote,
       tracking:
-        provider === 'squid'
+        provider === 'squid' || provider === 'relay'
           ? { quoteId: quote.id, requestId: data.requestId }
           : undefined,
     };

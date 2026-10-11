@@ -11,6 +11,7 @@ import { ensureTokenApproval, isNativeToken } from '../lib/erc20';
 import { toHexQuantity, validateTransactionRequest } from '../lib/swap';
 import { appendBuilderCodeForChain } from '../lib/builderCode';
 import { API_BASE_URL } from '../constants';
+import { assertRelayExecution, relayExecutionPayload } from '../lib/relay';
 import type { ChainKey } from '../lib/chains';
 import type { SwapDraft, TxStatus } from '../types';
 
@@ -24,6 +25,7 @@ export function useSwapExecution(
   const [error, setError] = useState('');
 
   const statusPollerRef = useRef<{ stop: () => void } | null>(null);
+  const executionInFlightRef = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -124,6 +126,7 @@ export function useSwapExecution(
       isAmountInsufficient: boolean,
       volumeUsd?: number
     ) => {
+      if (executionInFlightRef.current) return;
       if (!walletBridge) {
         if (hasPrivy && !isAuthenticated) {
           privyLogin();
@@ -153,16 +156,13 @@ export function useSwapExecution(
         return;
       }
 
-      // Defence-in-depth: if the calldata contains the connected wallet's
-      // address, the recipient embedded matches us. If NEITHER fromChain nor
-      // dstChain calldata mentions our address, something is off — refuse.
-      // (Provider routers universally encode the recipient in calldata; a quote
-      //  that omits us entirely is almost certainly misrouted.)
+      // Existing LI.FI/Squid recipient guard. Relay's recipient is committed
+      // in the settlement-order hash and uses the stronger checks below.
       const data = (bestQuote.transactionRequest.data ?? '').toLowerCase();
       const walletNeedle = walletBridge.address
         .toLowerCase()
         .replace(/^0x/, '');
-      if (data.length > 10 && walletNeedle && !data.includes(walletNeedle)) {
+      if (bestQuote.provider !== 'relay-api' && data.length > 10 && walletNeedle && !data.includes(walletNeedle)) {
         setError(
           'Safety check failed: this quote does not appear to route funds to your connected wallet. Refresh quotes and try again.'
         );
@@ -170,12 +170,33 @@ export function useSwapExecution(
       }
 
       try {
+        executionInFlightRef.current = true;
         setIsExecuting(true);
         setError('');
         setTxStatus(null);
 
+        const isRelay = bestQuote.provider === 'relay-api';
+        const assertActiveWallet = async (provider: Awaited<ReturnType<PrivyWalletBridge['getEthereumProvider']>>) => {
+          const accounts = await provider.request({ method: 'eth_accounts' }) as string[];
+          const chainId = await provider.request({ method: 'eth_chainId' }) as string;
+          if (accounts[0]?.toLowerCase() !== walletBridge.address.toLowerCase() || Number(BigInt(chainId)) !== fromChainId) throw new Error('Your wallet account or network changed. Refresh quotes.');
+          if (isRelay) assertRelayExecution(bestQuote, draft, walletBridge.address);
+        };
+        if (isRelay) {
+          assertRelayExecution(bestQuote, draft, walletBridge.address);
+          const response = await fetch(`${API_BASE_URL}/quotes/relay/validate`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ...relayExecutionPayload(draft, walletBridge.address), requestId: bestQuote.tracking?.requestId }),
+            signal: AbortSignal.timeout(8000),
+          });
+          if (!response.ok) throw new Error('Relay quote is no longer valid. Refresh quotes.');
+          const verified = await response.json() as { transaction: QuoteResult['transactionRequest']; relayOrderId: string; expiresAt: number };
+          if (verified.transaction?.to?.toLowerCase() !== bestQuote.transactionRequest.to?.toLowerCase() || verified.transaction?.data?.toLowerCase() !== bestQuote.transactionRequest.data?.toLowerCase() || BigInt(verified.transaction?.value ?? '0') !== BigInt(bestQuote.transactionRequest.value ?? '0') || verified.relayOrderId !== bestQuote.relayOrderId) throw new Error('Relay transaction changed. Refresh quotes.');
+        }
+
         await walletBridge.switchChain(fromChainId);
         const provider = await walletBridge.getEthereumProvider();
+        if (isRelay) await assertActiveWallet(provider);
 
         if (fromChainId === 5042) {
           const nativeBalance = BigInt(
@@ -184,16 +205,18 @@ export function useSwapExecution(
               params: [walletBridge.address, 'latest'],
             })) as string
           );
-          const sourceAmount =
-            (requestedAmountRaw ?? parseUnits(draft.amount, 6)) * 10n ** 12n;
+          const sourceRaw = requestedAmountRaw ?? parseUnits(draft.amount, selectedFromToken.decimals);
+          const sourceAmount = selectedFromToken.symbol === 'USDC'
+            ? sourceRaw * 10n ** BigInt(18 - selectedFromToken.decimals)
+            : 0n;
           const gasPrice = BigInt(
-            bestQuote.transactionRequest.maxFeePerGas ??
-              bestQuote.transactionRequest.gasPrice ??
+            (!isRelay ? bestQuote.transactionRequest.maxFeePerGas : undefined) ??
+              (!isRelay ? bestQuote.transactionRequest.gasPrice : undefined) ??
               ((await provider.request({ method: 'eth_gasPrice' })) as string)
           );
           // Reserve for the route and a possible approval. Both spend native USDC.
           const gasLimit =
-            BigInt(bestQuote.transactionRequest.gasLimit ?? '500000') + 100000n;
+            BigInt((!isRelay ? bestQuote.transactionRequest.gasLimit : undefined) ?? '500000') + 100000n;
           const reserve = (gasLimit * gasPrice * 120n) / 100n;
           if (nativeBalance < sourceAmount + reserve)
             throw new Error(
@@ -201,43 +224,46 @@ export function useSwapExecution(
             );
         }
         const spenderAddress = bestQuote.transactionRequest.to;
-        if (spenderAddress && !isNativeToken(selectedFromToken.address)) {
-          const requiredAmount =
+        const approvalToken = isRelay ? bestQuote.context!.srcToken : selectedFromToken.address;
+        if (spenderAddress && !isNativeToken(approvalToken)) {
+          const requiredAmount = isRelay ? BigInt(bestQuote.context!.amount) :
             requestedAmountRaw ??
             parseUnits(draft.amount, selectedFromToken.decimals);
           await ensureTokenApproval(
             provider,
-            selectedFromToken.address,
+            approvalToken,
             walletBridge.address,
             spenderAddress,
             requiredAmount
           );
         }
 
+        if (isRelay) await assertActiveWallet(provider);
+
         const txParams: Record<string, unknown> = {
           from: walletBridge.address,
           to: bestQuote.transactionRequest.to,
           // Base Builder Code attribution applies on Base only.
-          data: appendBuilderCodeForChain(
+          data: isRelay ? bestQuote.transactionRequest.data : appendBuilderCodeForChain(
             bestQuote.transactionRequest.data,
             fromChainId
           ),
           value: toHexQuantity(bestQuote.transactionRequest.value) ?? '0x0',
         };
 
-        if (bestQuote.transactionRequest.maxFeePerGas) {
+        if (!isRelay && bestQuote.transactionRequest.maxFeePerGas) {
           txParams.maxFeePerGas = toHexQuantity(
             bestQuote.transactionRequest.maxFeePerGas
           );
           txParams.maxPriorityFeePerGas = toHexQuantity(
             bestQuote.transactionRequest.maxPriorityFeePerGas
           );
-        } else if (bestQuote.transactionRequest.gasPrice) {
+        } else if (!isRelay && bestQuote.transactionRequest.gasPrice) {
           txParams.gasPrice = toHexQuantity(
             bestQuote.transactionRequest.gasPrice
           );
         }
-        if (bestQuote.transactionRequest.gasLimit) {
+        if (!isRelay && bestQuote.transactionRequest.gasLimit) {
           txParams.gas = toHexQuantity(bestQuote.transactionRequest.gasLimit);
         }
 
@@ -274,6 +300,7 @@ export function useSwapExecution(
             : 'Swap execution failed.'
         );
       } finally {
+        executionInFlightRef.current = false;
         setIsExecuting(false);
       }
     },

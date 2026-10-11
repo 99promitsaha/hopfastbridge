@@ -1,5 +1,5 @@
-export type Provider = 'lifi' | 'squid';
-export const providers: Provider[] = ['lifi', 'squid'];
+export type Provider = 'lifi' | 'squid' | 'relay';
+export const providers: Provider[] = ['lifi', 'squid', 'relay'];
 export interface ComparableQuote {
   id: string; dstAmount: string; dstAmountMin?: string; feeUsd: string;
   duration: { estimated: string | null }; userSteps: unknown[];

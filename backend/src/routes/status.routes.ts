@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { isDatabaseReady } from '../config/db.js';
 import { TransactionHistory } from '../models/TransactionHistory.js';
 import { SwapRecord } from '../models/SwapRecord.js';
+import { fetchRelayStatus } from '../lib/relayClient.js';
 
 const router = Router();
 
@@ -237,6 +238,9 @@ router.get('/status', async (req, res) => {
         quoteId,
         requestId,
       });
+    } else if (provider === 'relay' || provider === 'relay-api') {
+      if (!requestId || !fromChainId || !toChainId) return res.status(400).json({ error: 'Relay status requires requestId and both chains.' });
+      result = await fetchRelayStatus(requestId, txHash, fromChainId, toChainId);
     } else {
       return res
         .status(400)

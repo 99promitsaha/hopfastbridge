@@ -38,6 +38,7 @@ import {
 } from '../constants';
 import type { ProviderKey, SwapDraft, TxStatus, TxStage } from '../types';
 import type { QuoteResult } from '../services/quoteService';
+import { compareQuotes, getBestQuote } from '../lib/quoteRanking';
 import type { PrivyWalletBridge } from './WalletConnector';
 
 interface SwapViewProps {
@@ -402,14 +403,12 @@ export function SwapView({
     !anyQuote &&
     'lifi' in quotes;
 
-  /** ID of the quote with the lowest fee — independent of user selection. */
-  const objectivelyBestId = useMemo(() => {
+  /** Highest received amount, independent of the user's selected provider. */
+  const objectivelyBestQuote = useMemo(() => {
     const available = PROVIDER_META.map(({ key }) => quotes[key]).filter(
       (q): q is QuoteResult => q != null
     );
-    if (!available.length) return null;
-    return available.reduce((best, q) => (q.feeUsd < best.feeUsd ? q : best))
-      .id;
+    return getBestQuote(available);
   }, [quotes]);
 
   const sortedRoutes = useMemo(
@@ -427,19 +426,8 @@ export function SwapView({
             quotes[key] === null,
         }))
         .filter(({ pQuote }) => pQuote != null)
-        .sort((a, b) => {
-          const aIsBest =
-            objectivelyBestId != null && a.pQuote?.id === objectivelyBestId;
-          const bIsBest =
-            objectivelyBestId != null && b.pQuote?.id === objectivelyBestId;
-          if (aIsBest) return -1;
-          if (bIsBest) return 1;
-          // Non-best routes: lowest fee first
-          return (
-            (a.pQuote?.feeUsd ?? Infinity) - (b.pQuote?.feeUsd ?? Infinity)
-          );
-        }),
-    [quotes, quotingProviders, retryingProviders, objectivelyBestId]
+        .sort((a, b) => compareQuotes(a.pQuote!, b.pQuote!)),
+    [quotes, quotingProviders, retryingProviders]
   );
 
   return (
@@ -1043,11 +1031,8 @@ export function SwapView({
                               ? 'Awaiting quote'
                               : 'Awaiting amount'
                             : 'Ready to quote';
-                        const isBest =
-                          objectivelyBestId != null &&
-                          pQuote?.id === objectivelyBestId;
-                        const isSelected =
-                          pQuote != null && bestQuote?.id === pQuote.id;
+                        const isBest = pQuote != null && pQuote === objectivelyBestQuote;
+                        const isSelected = pQuote != null && pQuote === bestQuote;
                         // Allow selection whenever a quote is displayed. Previously
                         // `!pLoading` gated this, which silently dropped clicks on
                         // whichever provider was still re-quoting during the 60 s
@@ -1070,7 +1055,7 @@ export function SwapView({
                           >
                             {isBest && (
                               <span className="hf-route-best-badge">
-                                Lowest cost
+                                Most received
                               </span>
                             )}
                             {isSelected && !isBest && (
@@ -1112,6 +1097,7 @@ export function SwapView({
                               <div className="hf-route-right">
                                 {pQuote ? (
                                   <>
+                                    <span className="hf-route-meta">You receive</span>
                                     <div className="hf-route-right-top">
                                       <span className="hf-route-amount">
                                         {truncateDisplay(

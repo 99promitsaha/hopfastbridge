@@ -3,7 +3,7 @@ import type { TxStage as StatusTxStage } from './services/transactionStatusServi
 
 export type EntryView = 'human' | 'stats' | 'payment' | 'deployment' | 'roadmap';
 
-export type ProviderKey = 'lifi' | 'squid';
+export type ProviderKey = 'lifi' | 'squid' | 'relay';
 
 export interface SwapDraft {
   fromChain: ChainKey;

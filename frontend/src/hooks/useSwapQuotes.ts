@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSwapQuote, type QuoteResult } from '../services/quoteService';
 import { isValidSwapInput } from '../lib/swap';
+import { getBestQuote } from '../lib/quoteRanking';
 import {
   DEBOUNCE_MS,
   LIVE_PROVIDERS,
@@ -58,8 +59,7 @@ export function useSwapQuotes(activeWalletAddress: string | null) {
     const available = LIVE_PROVIDERS.map((p) => quotes[p]).filter(
       (q): q is QuoteResult => q != null
     );
-    if (!available.length) return null;
-    return available.reduce((best, q) => (q.feeUsd < best.feeUsd ? q : best));
+    return getBestQuote(available);
   })();
 
   const fetchQuote = useCallback(

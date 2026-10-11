@@ -106,13 +106,13 @@ export function LandingView({
           </div>
           <div className="hf-product-proof" aria-label="Product assurances">
             <span>
-              <Route size={14} /> Compare LI.FI and Squid
+              <Route size={14} /> Compare live quotes
             </span>
             <span>
-              <AtSign size={14} /> Pay a Hopfast ID or X username
+              <AtSign size={14} /> Pay by ID or username
             </span>
             <span>
-              <ShieldCheck size={14} /> Sign with your own wallet
+              <ShieldCheck size={14} /> Use your own wallet
             </span>
           </div>
         </div>
@@ -126,23 +126,23 @@ export function LandingView({
             <div className="hf-terminal-route">
               <div
                 className="hf-terminal-route-path"
-                aria-label="Base USDC routed to Arc USDC via LI.FI or Squid"
+                aria-label="Base USDC routed to Arc USDC via LI.FI, Squid or Relay"
               >
                 <span>
                   <img src="/chains/base.svg" alt="" />
                   <strong>Base USDC</strong>
                 </span>
                 <ArrowRight size={14} aria-hidden="true" />
-                <span className="hf-terminal-route-providers">
-                  <span className="hf-terminal-provider">
-                    <img src="/providers/lifi.png" alt="" />
-                    <strong>LI.FI</strong>
+                <span
+                  className="hf-terminal-route-providers"
+                  title="Compare LI.FI, Squid and Relay quotes"
+                >
+                  <span className="hf-terminal-provider-logos">
+                    <img src="/providers/lifi.png" alt="LI.FI" />
+                    <img src="/providers/squid.ico" alt="Squid" />
+                    <img src="/providers/relay.png" alt="Relay" />
                   </span>
-                  <span className="hf-terminal-provider-sep">or</span>
-                  <span className="hf-terminal-provider">
-                    <img src="/providers/squid.ico" alt="" />
-                    <strong>Squid</strong>
-                  </span>
+                  <strong>Compare Quotes</strong>
                 </span>
                 <ArrowRight size={14} aria-hidden="true" />
                 <span>
@@ -231,8 +231,8 @@ export function LandingView({
             <div>
               <h3>Get USDC onto Arc.</h3>
               <p>
-                Choose where your USDC starts. Hopfast compares live LI.FI and
-                Squid routes and shows only the quotes you can use.
+                Choose where your USDC starts. Hopfast compares live quotes from
+                LI.FI, Squid and Relay to find the best return for your transfer.
               </p>
               <button type="button" onClick={onBridge}>
                 Compare routes <ArrowRight size={15} />
@@ -260,11 +260,23 @@ export function LandingView({
                   <div className="hf-route-preview-quote-info">
                     <strong>LI.FI</strong>
                     <small className="hf-route-preview-badge">
-                      Lowest cost
+                      Most received
                     </small>
                   </div>
                   <div className="hf-route-preview-quote-right">
                     <strong>499.73 USDC</strong>
+                    <small className="hf-route-preview-time">~2 min</small>
+                  </div>
+                </div>
+                <div className="hf-route-preview-quote">
+                  <span>
+                    <img src="/providers/relay.png" alt="" />
+                  </span>
+                  <div className="hf-route-preview-quote-info">
+                    <strong>Relay</strong>
+                  </div>
+                  <div className="hf-route-preview-quote-right">
+                    <strong>499.42 USDC</strong>
                     <small className="hf-route-preview-time">~2 min</small>
                   </div>
                 </div>
@@ -282,7 +294,7 @@ export function LandingView({
                 </div>
               </div>
               <div className="hf-route-preview-meta">
-                <span>Live quotes · tracked through arrival</span>
+                <span>Example quotes · compare live routes</span>
               </div>
             </div>
           </article>
