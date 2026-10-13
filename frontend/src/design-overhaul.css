@@ -451,6 +451,21 @@ textarea:focus-visible {
   flex: 0 0 auto;
   color: #7c9abe;
 }
+.hf-terminal-route-path > .hf-terminal-source-networks {
+  gap: 5px;
+}
+.hf-terminal-source-networks img {
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.85);
+}
+.hf-terminal-route-path > .hf-terminal-destination {
+  gap: 6px;
+}
+.hf-terminal-destination > span {
+  color: #9ab0c8;
+  font-size: 14px;
+  font-weight: 400;
+}
 .hf-terminal-route-path > .hf-terminal-route-providers {
   gap: 9px;
   padding: 6px 11px 6px 7px;
@@ -3216,7 +3231,50 @@ textarea:focus-visible {
     min-height: 410px;
   }
   .hf-terminal-route-path {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+  .hf-terminal-route {
+    padding: 14px 8px;
+  }
+  .hf-terminal-route-path > .hf-terminal-source-networks {
+    display: grid;
+    grid-template-columns: repeat(3, 16px);
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .hf-terminal-route-path > .hf-terminal-source-networks img {
+    width: 16px;
+    height: 16px;
+    padding: 1px;
+  }
+  .hf-terminal-route-path > svg {
+    width: 10px;
+  }
+  .hf-terminal-route-path > .hf-terminal-route-providers {
+    gap: 5px;
+    padding: 6px;
+    font-size: 8.5px;
+  }
+  .hf-terminal-route-providers > strong {
+    max-width: 40px;
+    white-space: normal;
+    line-height: 1.3;
+  }
+  .hf-terminal-provider-logos {
+    gap: 3px;
+  }
+  .hf-terminal-route-providers .hf-terminal-provider-logos img {
+    width: 16px;
+    height: 16px;
+  }
+  .hf-terminal-route-path > .hf-terminal-destination {
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .hf-terminal-route-path > .hf-terminal-destination img {
+    width: 18px;
+    height: 18px;
   }
   .hf-terminal-people {
     right: 0;

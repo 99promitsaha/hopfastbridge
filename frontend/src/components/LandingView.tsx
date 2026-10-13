@@ -127,11 +127,15 @@ export function LandingView({
             <div className="hf-terminal-route">
               <div
                 className="hf-terminal-route-path"
-                aria-label="Base USDC routed to Arc USDC via LI.FI, Squid or Relay"
+                aria-label="Compare LI.FI, Squid and Relay routes from supported networks to USDC on Arc"
               >
-                <span>
-                  <img src="/chains/base.svg" alt="" />
-                  <strong>Base USDC</strong>
+                <span className="hf-terminal-source-networks" aria-label="Supported source networks">
+                  <img src="/chains/base.svg" alt="Base" />
+                  <img src="/token-icons/eth.svg" alt="Ethereum" />
+                  <img src="/chains/robinhood.png" alt="Robinhood" />
+                  <img src="/chains/monad.png" alt="Monad" />
+                  <img src="/chains/bnb.svg" alt="BNB Chain" />
+                  <img src="/chains/polygon.svg" alt="Polygon" />
                 </span>
                 <ArrowRight size={14} aria-hidden="true" />
                 <span
@@ -146,9 +150,10 @@ export function LandingView({
                   <strong>Compare Quotes</strong>
                 </span>
                 <ArrowRight size={14} aria-hidden="true" />
-                <span>
-                  <img src="/brand/arc-mark.svg" alt="" />
-                  <strong>Arc USDC</strong>
+                <span className="hf-terminal-destination" aria-label="USDC on Arc">
+                  <img src="/token-icons/usdc.svg" alt="USDC" />
+                  <span aria-hidden="true">/</span>
+                  <img src="/brand/arc-mark.svg" alt="Arc" />
                 </span>
               </div>
             </div>
@@ -168,10 +173,10 @@ export function LandingView({
               </span>
               <div>
                 <small>USDC RECEIVED</small>
-                <strong>@helloworld</strong>
+                <strong>@hopfast</strong>
               </div>
               <b>
-                100 <small>USDC</small>
+                +100 <small>USDC</small>
               </b>
             </div>
           </div>
