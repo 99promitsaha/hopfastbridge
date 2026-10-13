@@ -1,3 +1,4 @@
+import { TransientError } from './TransientError';
 import { LoadingState } from './Loading';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -111,7 +112,7 @@ export function StatsView({ onBack }: Props) {
       </div>
 
       {loading && <LoadingState label="Loading activity…" />}
-      {error && <p className="hf-stats-error">{error}</p>}
+      <TransientError className="hf-stats-error" message={error} />
 
       {data && !loading && (
         <>

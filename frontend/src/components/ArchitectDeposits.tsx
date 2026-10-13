@@ -1,3 +1,4 @@
+import { TransientError } from './TransientError';
 import { LoadingSpinner, LoadingState } from './Loading';
 import { useState } from "react";
 import { Copy, ExternalLink, RefreshCw, RotateCcw, Search } from "lucide-react";
@@ -80,7 +81,7 @@ export function ArchitectDeposits({
           {busy ? "Loading…" : loaded ? "Refresh" : wallet ? "Load payments" : "Connect to load"}
         </button>
       </header>
-      {error && <p role="alert">{error}</p>}
+      <TransientError message={error} />
       {busy && !loaded && <LoadingState label="Loading your payments…" />}
       {loaded && (items.length > 0 || directItems.length > 0) && (
         <div className="hf-activity-kind" role="group" aria-label="Filter payment type">

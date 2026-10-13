@@ -1,3 +1,4 @@
+import { TransientError } from './TransientError';
 import { LoadingSpinner, LoadingState } from './Loading';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Clock3, ExternalLink, ShieldCheck } from 'lucide-react';
@@ -173,7 +174,7 @@ export function ArchitectClaim({
             {busy ? <><LoadingSpinner /> Returning USDC…</> : 'Return unclaimed USDC to sender'}
           </button>
         )}
-      {error && <p className="hf-support-error" role="alert">{error}</p>}
+      <TransientError className="hf-support-error" message={error} />
       <small className="hf-claim-disclosure">
         The payment fee was collected when this payment was created. Claiming
         adds no second Hopfast fee. Network gas is separate.

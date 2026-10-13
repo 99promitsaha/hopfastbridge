@@ -1,3 +1,4 @@
+import { TransientError } from './TransientError';
 import { Dialog } from './Dialog';
 import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
@@ -90,7 +91,7 @@ export function TransactionHistoryModal({
             Loading transactions…
           </p>
         ) : historyError ? (
-          <p className="hf-history-empty">{historyError}</p>
+          <TransientError className="hf-history-empty" message={historyError} />
         ) : historyRecords.length === 0 ? (
           <p className="hf-history-empty">Bridge transactions from this wallet will appear here.</p>
         ) : (

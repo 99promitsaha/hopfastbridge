@@ -1,3 +1,4 @@
+import { TransientError } from './TransientError';
 import { useEffect, useState } from "react";
 import {
   createPublicClient,
@@ -180,7 +181,7 @@ export function ArchitectDeployment({
             </a>
           </p>
         )}
-        {error && <p role="alert">{error}</p>}
+        <TransientError message={error} />
       </section>
     </main>
   );

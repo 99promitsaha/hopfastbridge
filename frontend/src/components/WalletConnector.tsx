@@ -1,3 +1,4 @@
+import { TransientError } from './TransientError';
 import { clearInvoiceSessions } from '../services/invoiceService';
 import { LoadingSpinner } from './Loading';
 import { useEffect, useMemo, useState } from 'react';
@@ -177,7 +178,7 @@ export function PrivyWalletConnector({
           <Wallet2 size={14} />
           Connect
         </button>
-        {connectError && <span role="alert">{connectError}</span>}
+        <TransientError as="span" message={connectError} />
       </div>
     );
   }
@@ -242,7 +243,7 @@ export function PrivyWalletConnector({
           {disconnecting ? <LoadingSpinner size={14} /> : <LogOut size={14} />}
         </span>
       </button>
-      {connectError && <span role="alert">{connectError}</span>}
+      <TransientError as="span" message={connectError} />
     </div>
   );
 }

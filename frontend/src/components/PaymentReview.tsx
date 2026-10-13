@@ -1,3 +1,4 @@
+import { TransientError } from './TransientError';
 import { LoadingSpinner } from './Loading';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
@@ -327,11 +328,7 @@ export function PaymentReview({
             )}
           </>
         )}
-        {error && (
-          <p className="hf-payment-error" role="alert">
-            {error}
-          </p>
-        )}
+        <TransientError className="hf-payment-error" message={error} />
       </div>
     </motion.main>
   );

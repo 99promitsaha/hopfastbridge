@@ -1,3 +1,4 @@
+import { TransientError } from './TransientError';
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Loader2, Send, ShieldCheck } from 'lucide-react';
 import { API_BASE_URL } from '../constants';
@@ -105,8 +106,8 @@ export function ProfilePayment({ handle, wallet, onConnect, onPayAnother }: {
           {busy ? <Loader2 className="hf-spin" size={15} /> : <Send size={15} />}
         </button>
         <button className="hf-support-reset" type="button" onClick={onPayAnother}><ArrowLeft size={14} /> Pay someone else</button>
-        {amount && !validAmount && <small role="alert">Enter a positive amount with up to six decimal places.</small>}
-        {error && <p className="hf-support-error" role="alert">{error}</p>}
+        <TransientError as="small" message={(amount && !validAmount) ? "Enter a positive amount with up to six decimal places." : ""} />
+        <TransientError className="hf-support-error" message={error} />
       </form>
     </section>
   );

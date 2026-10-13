@@ -1,3 +1,4 @@
+import { TransientError } from './TransientError';
 import { useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -964,12 +965,8 @@ export function SwapView({
               {bestQuote?.warning && (
                 <p className="hf-note hf-note-warning">{bestQuote.warning}</p>
               )}
-              {balanceError && (
-                <p className="hf-note hf-note-warning">
-                  Balance check: {balanceError}
-                </p>
-              )}
-              {error && <p className="hf-note hf-note-error">{error}</p>}
+              <TransientError className="hf-note hf-note-warning" message={balanceError ? `Balance check: ${balanceError}` : ""} />
+              <TransientError className="hf-note hf-note-error" message={error} />
             </div>
 
             <div className="hf-beta-notice" role="note">
