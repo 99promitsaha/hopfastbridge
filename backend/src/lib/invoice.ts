@@ -3,8 +3,23 @@ import { keccak256, stringToHex } from 'viem';
 
 const text = (length: number) => z.string().trim().max(length);
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v, 'Invalid date');
-export const billingSchema = z.object({ name: text(160).min(1), email: z.union([z.literal(''), z.string().email().max(254)]).default(''), address: text(800).default('') });
-export const businessSchema = billingSchema.extend({ clients: z.array(billingSchema.extend({ id: z.string().uuid() })).max(100).default([]) }).refine(value => new Set(value.clients.map(client => client.id)).size === value.clients.length, 'Client IDs must be unique');
+export const billingSchema = z.object({ name: text(160).min(1), email: z.string().trim().max(254).refine(value => value === '' || z.string().email().safeParse(value).success, 'Invalid email').default(''), address: text(800).default('') });
+export const invoiceClientSchema = billingSchema.extend({ id: z.string().uuid() });
+export const businessSchema = billingSchema.extend({ clients: z.array(invoiceClientSchema).max(100).default([]) }).refine(value => new Set(value.clients.map(client => client.id)).size === value.clients.length, 'Client IDs must be unique');
+
+export function invoiceNumberFloor(numbers: string[], reserved = 0): number {
+  let highest = reserved;
+  for (const number of numbers) {
+    const match = /^INV-(\d+)$/i.exec(number.trim());
+    if (!match) continue;
+    const value = Number(match[1]);
+    // Very long numeric custom identifiers remain valid without breaking setup.
+    if (!Number.isSafeInteger(value)) continue;
+    highest = Math.max(highest, value);
+  }
+  return highest;
+}
+export const formatInvoiceNumber = (value: number) => `INV-${String(value).padStart(3, '0')}`;
 const money = z.string().regex(/^\d{1,7}(?:\.\d{1,6})?$/);
 export const invoiceSchema = z.object({
   number: text(60).min(1), client: billingSchema,

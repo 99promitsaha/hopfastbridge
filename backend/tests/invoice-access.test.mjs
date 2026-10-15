@@ -9,7 +9,7 @@ process.env.ARC_RPC_URL = 'http://127.0.0.1:12345';
 process.env.INVOICE_ESCROW_ADDRESS = '';
 process.env.INVOICE_SIGNER_KEY = '';
 const { ArchitectAuth, PaymentProfile } = await import('../dist/models/ArchitectEnvelope.js');
-const { Invoice, InvoiceBusiness } = await import('../dist/models/Invoice.js');
+const { Invoice, InvoiceBusiness, InvoiceSequence } = await import('../dist/models/Invoice.js');
 const { default: routes } = await import('../dist/routes/invoices.routes.js');
 
 test('invoice API enforces signed sessions, ownership, private drafts and fail-closed publishing', async () => {
@@ -25,9 +25,12 @@ test('invoice API enforces signed sessions, ownership, private drafts and fail-c
   stub(ArchitectAuth,'findOne',async query=>auth.find(record=>match(record,query)));
   stub(ArchitectAuth,'findOneAndDelete',async query=>{const index=auth.findIndex(record=>match(record,query));return index < 0 ? null : auth.splice(index,1)[0];});
   stub(InvoiceBusiness,'findOne',async query=>businesses.find(record=>match(record,query)));
-  stub(InvoiceBusiness,'findOneAndUpdate',async(query,update)=>{let record=businesses.find(record=>match(record,query));if(!record){record={...query};businesses.push(record);}Object.assign(record,update);return record;});
+  stub(InvoiceBusiness,'findOneAndUpdate',async(query,update)=>{let record=businesses.find(record=>match(record,query));if(!record){record={...query,details:{clients:[]}};businesses.push(record);}for(const [key,value] of Object.entries(update.$set??{}))record.details[key.replace(/^details\./,'')]=value;return record;});
+  stub(Invoice,'init',async()=>Invoice);
   stub(Invoice,'create',async input=>{const doc={...input,state:'draft',_id:String(invoices.length),async save(){return this;}};invoices.push(doc);return doc;});
   stub(Invoice,'findOne',async query=>invoices.find(record=>match(record,query)));
+  stub(Invoice,'exists',async query=>invoices.find(record=>record.owner===query.owner&&(query['input.number'] instanceof RegExp?query['input.number'].test(record.input.number):record.invoiceId===query.invoiceId&&record.state===query.state))??null);
+  stub(InvoiceSequence,'updateOne',async()=>({acknowledged:true}));
   stub(Invoice,'findOneAndDelete',async query=>{const index=invoices.findIndex(record=>match(record,query));return index<0?null:invoices.splice(index,1)[0];});
   stub(Invoice,'findOneAndUpdate',async(query,update)=>{const record=invoices.find(record=>match(record,query));if(record)Object.assign(record,update.$set);return record;});
   stub(PaymentProfile,'findOne',async()=>null);

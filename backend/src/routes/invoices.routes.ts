@@ -1,6 +1,6 @@
 import { Router, type Request, type Response, type NextFunction } from 'express';
 import rateLimit from 'express-rate-limit';
-import { createHash, randomBytes } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { createPublicClient, decodeEventLog, http, type Address, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
@@ -8,8 +8,8 @@ import { env } from '../config/env.js';
 import { isDatabaseReady } from '../config/db.js';
 import { authenticate } from './architects.routes.js';
 import { ArchitectAuth, PaymentProfile } from '../models/ArchitectEnvelope.js';
-import { Invoice, InvoiceBusiness } from '../models/Invoice.js';
-import { businessSchema, invoiceSchema, invoiceTotals, invoiceDetailsHash, invoicePaymentTypes } from '../lib/invoice.js';
+import { Invoice, InvoiceBusiness, InvoiceSequence } from '../models/Invoice.js';
+import { billingSchema, businessSchema, invoiceClientSchema, invoiceNumberFloor, formatInvoiceNumber, invoiceSchema, invoiceTotals, invoiceDetailsHash, invoicePaymentTypes } from '../lib/invoice.js';
 import artifact from '../contracts/InvoiceEscrow.json' with { type: 'json' };
 
 const router = Router();
@@ -18,13 +18,16 @@ const token = '0x3600000000000000000000000000000000000000';
 const digest = (value: string) => createHash('sha256').update(value).digest('hex');
 const idSchema = z.string().regex(/^0x[0-9a-f]{64}$/);
 const txSchema = z.string().regex(/^0x[0-9a-fA-F]{64}$/);
+const newClientSchema = invoiceClientSchema.extend({ id: z.string().uuid().default(() => randomUUID()) });
+const duplicateRecord = (error: unknown) => typeof error === 'object' && error !== null && 'code' in error && error.code === 11000;
 const wrap = (handler: (req: Request, res: Response) => Promise<unknown>) => async (req: Request, res: Response, _next: NextFunction) => {
   try { await handler(req, res); } catch (error) {
-    const message = error instanceof z.ZodError ? 'Check the invoice fields and try again.' : error instanceof Error ? error.message : 'Invoice action failed.';
+    const message = error instanceof z.ZodError ? 'Check the invoice fields and try again.' : duplicateRecord(error) ? 'This record already exists. Choose another invoice number or refresh and retry.' : error instanceof Error ? error.message : 'Invoice action failed.';
     res.status(error instanceof z.ZodError ? 400 : 409).json({ error: message.length < 180 && !/rpc|http|mongo|private|key|signature=/i.test(message) ? message : 'This invoice action is temporarily unavailable. Please retry.' });
   }
 };
 router.use('/invoices', rateLimit({ windowMs: 60000, limit: 60, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many invoice requests. Please wait a minute.' } }), (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
   if (!isDatabaseReady()) return res.status(503).json({ error: 'Invoices are temporarily unavailable.' });
   next();
 });
@@ -78,7 +81,74 @@ router.post('/invoices/session', wrap(async (req, res) => {
   res.json({ session });
 }));
 router.get('/invoices/business', wrap(async (req, res) => { const wallet = await owner(req); res.json({ details: (await InvoiceBusiness.findOne({ owner: wallet }))?.details ?? null }); }));
-router.put('/invoices/business', wrap(async (req, res) => { const wallet = await owner(req), details = businessSchema.parse(req.body); await InvoiceBusiness.findOneAndUpdate({ owner: wallet }, { details }, { upsert: true }); res.json({ details }); }));
+router.put('/invoices/business', wrap(async (req, res) => {
+  const wallet = await owner(req);
+  const billing = billingSchema.parse(req.body);
+  // An older tab may still submit its client book. Never let that stale snapshot
+  // erase, revert or resurrect clients managed by the dedicated client endpoints.
+  if (req.body.clients !== undefined) {
+    const { clients } = businessSchema.parse(req.body);
+    const saved = await InvoiceBusiness.findOne({ owner: wallet });
+    if (JSON.stringify(clients) !== JSON.stringify(saved?.details.clients ?? [])) throw new Error('Your saved clients changed. Refresh and manage them in Clients, then save business details separately.');
+  }
+  const doc = await InvoiceBusiness.findOneAndUpdate({ owner: wallet }, { $set: {
+    'details.name': billing.name, 'details.email': billing.email, 'details.address': billing.address,
+  } }, { upsert: true, new: true });
+  res.json({ details: { ...doc!.details, clients: doc!.details.clients ?? [] } });
+}));
+async function numberFloor(wallet: string) {
+  const [docs, sequence] = await Promise.all([
+    Invoice.find({ owner: wallet, 'input.number': /^INV-\d+$/i }).select('input.number').lean(),
+    InvoiceSequence.findOne({ owner: wallet }),
+  ]);
+  return invoiceNumberFloor(docs.map(doc => doc.input.number), sequence?.value ?? 0);
+}
+async function reserveNumber(wallet: string) {
+  const floor = await numberFloor(wallet);
+  if (floor >= Number.MAX_SAFE_INTEGER - 1) throw new Error('Use a custom invoice number; the automatic sequence is too large.');
+  await InvoiceSequence.updateOne({ owner: wallet }, { $max: { value: floor } }, { upsert: true });
+  const sequence = await InvoiceSequence.findOneAndUpdate({ owner: wallet, value: { $lt: Number.MAX_SAFE_INTEGER } }, { $inc: { value: 1 } }, { new: true });
+  if (!sequence) throw new Error('Could not assign an invoice number. Please retry.');
+  return formatInvoiceNumber(sequence.value);
+}
+const numberKey = (wallet: string, number: string) => `${wallet}:${number.toLowerCase()}`;
+async function checkNumber(wallet: string, number: string, exceptId?: string) {
+  // Escape custom labels before matching older invoices that have no numberKey.
+  const exact = new RegExp(`^${number.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+  if (await Invoice.exists({ owner: wallet, 'input.number': exact, ...(exceptId ? { invoiceId: { $ne: exceptId } } : {}) })) throw new Error('You already have an invoice with this number. Choose another number.');
+}
+async function keepNumber(wallet: string, number: string) {
+  if (/^INV-\d+$/i.test(number) && Number.isSafeInteger(Number(number.slice(4)))) await InvoiceSequence.updateOne({ owner: wallet }, { $max: { value: Number(number.slice(4)) } }, { upsert: true });
+}
+router.get('/invoices/workspace', wrap(async (req, res) => {
+  const wallet = await owner(req);
+  const [business, profile, floor] = await Promise.all([
+    InvoiceBusiness.findOne({ owner: wallet }), PaymentProfile.findOne({ wallet }), numberFloor(wallet),
+  ]);
+  res.json({ details: business?.details ?? null, nextNumber: floor < Number.MAX_SAFE_INTEGER - 1 ? formatInvoiceNumber(floor + 1) : '', handle: profile?.handle ?? null });
+}));
+router.post('/invoices/clients', wrap(async (req, res) => {
+  const wallet = await owner(req);
+  const savedClient = newClientSchema.parse(req.body);
+  // Clients may be saved before business billing has been completed.
+  await InvoiceBusiness.updateOne({ owner: wallet }, { $setOnInsert: { details: { name: '', email: '', address: '', clients: [] } } }, { upsert: true });
+  const doc = await InvoiceBusiness.findOneAndUpdate({ owner: wallet, 'details.clients.id': { $ne: savedClient.id }, 'details.clients.99': { $exists: false } }, { $push: { 'details.clients': savedClient } }, { new: true });
+  if (!doc) throw new Error('Client already saved or your client book has reached 100 clients.');
+  res.status(201).json({ details: doc.details, client: savedClient });
+}));
+router.put('/invoices/clients/:clientId', wrap(async (req, res) => {
+  const wallet = await owner(req), id = z.string().uuid().parse(req.params.clientId);
+  const savedClient = { ...billingSchema.parse(req.body), id };
+  const doc = await InvoiceBusiness.findOneAndUpdate({ owner: wallet, 'details.clients.id': id }, { $set: { 'details.clients.$': savedClient } }, { new: true });
+  if (!doc) return res.status(404).json({ error: 'Saved client not found.' });
+  res.json({ details: doc.details, client: savedClient });
+}));
+router.delete('/invoices/clients/:clientId', wrap(async (req, res) => {
+  const wallet = await owner(req), id = z.string().uuid().parse(req.params.clientId);
+  const doc = await InvoiceBusiness.findOneAndUpdate({ owner: wallet, 'details.clients.id': id }, { $pull: { 'details.clients': { id } } }, { new: true });
+  if (!doc) return res.status(404).json({ error: 'Saved client not found.' });
+  res.json({ details: doc.details });
+}));
 router.get('/invoices/mine', wrap(async (req, res) => {
   const wallet = await owner(req);
   const page = z.coerce.number().int().min(0).max(10000).parse(req.query.page ?? 0);
@@ -95,15 +165,29 @@ router.get('/invoices/admin', wrap(async (req, res) => {
 }));
 router.post('/invoices', wrap(async (req, res) => {
   const wallet = await owner(req), input = invoiceSchema.parse(req.body), totals = invoiceTotals(input);
+  await Invoice.init(); // Fail closed until the unique number index is ready.
+  const autoNumber = z.boolean().optional().parse(req.body.autoNumber) ?? false;
   const business = await InvoiceBusiness.findOne({ owner: wallet });
   const billing = business ? { name: business.details.name, email: business.details.email, address: business.details.address } : undefined;
-  const doc = await Invoice.create({ owner: wallet, invoiceId: `0x${randomBytes(32).toString('hex')}`, input, totals, billing });
-  res.status(201).json({ invoice: output(doc) });
+  if (!autoNumber) { await checkNumber(wallet, input.number); await keepNumber(wallet, input.number); }
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (autoNumber) input.number = await reserveNumber(wallet);
+    try {
+      // The unique key, rather than a prior read, arbitrates simultaneous saves.
+      const doc = await Invoice.create({ owner: wallet, numberKey: numberKey(wallet, input.number), invoiceId: `0x${randomBytes(32).toString('hex')}`, input, totals, billing });
+      return res.status(201).json({ invoice: output(doc) });
+    } catch (error) { if (!autoNumber || !duplicateRecord(error) || attempt === 3) throw error; }
+  }
 }));
 router.put('/invoices/:id', wrap(async (req, res) => {
   const wallet = await owner(req), input = invoiceSchema.parse(req.body), totals = invoiceTotals(input);
-  const doc = await Invoice.findOneAndUpdate({ invoiceId: idSchema.parse(req.params.id), owner: wallet, state: 'draft' }, { $set: { input, totals }, $inc: { __v: 1 } }, { new: true });
+  await Invoice.init();
+  const id = idSchema.parse(req.params.id);
+  if (!await Invoice.exists({ invoiceId: id, owner: wallet, state: 'draft' })) throw new Error('Only your unpublished drafts can be edited.');
+  await checkNumber(wallet, input.number, id);
+  const doc = await Invoice.findOneAndUpdate({ invoiceId: id, owner: wallet, state: 'draft' }, { $set: { input, totals, numberKey: numberKey(wallet, input.number) }, $inc: { __v: 1 } }, { new: true });
   if (!doc) throw new Error('Only your unpublished drafts can be edited.');
+  await keepNumber(wallet, input.number);
   res.json({ invoice: output(doc) });
 }));
 router.get('/invoices/:id', wrap(async (req, res) => {
@@ -117,7 +201,7 @@ router.post('/invoices/:id/publish', wrap(async (req, res) => {
   const profile = await PaymentProfile.findOne({ wallet });
   if (!profile) throw new Error('Create your Hopfast ID in Receive before sharing an invoice.');
   const business = await InvoiceBusiness.findOne({ owner: wallet });
-  if (!business) throw new Error('Save your billing details first.');
+  if (!business?.details.name?.trim()) throw new Error('Save your business billing details before publishing.');
   doc.handle = profile.handle; doc.billing = { name: business.details.name, email: business.details.email, address: business.details.address };
   doc.contract = env.INVOICE_ESCROW_ADDRESS?.toLowerCase();
   if (!doc.contract) throw new Error('Publishing is awaiting invoice contract configuration. Your draft is saved.');

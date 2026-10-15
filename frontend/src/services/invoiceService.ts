@@ -3,7 +3,9 @@ import artifact from '../contracts/InvoiceEscrow.json';
 import type { PrivyWalletBridge } from '../components/WalletConnector';
 
 export type Billing = { name: string; email: string; address: string };
-export type Business = Billing & { clients: (Billing & { id: string })[] };
+export type SavedClient = Billing & { id: string };
+export type Business = Billing & { clients: SavedClient[] };
+export type InvoiceWorkspaceSummary = { details: Business | null; nextNumber: string; handle: string | null };
 export type InvoiceInput = { number: string; client: Billing; issueDate: string; dueDate: string; lines: { description: string; quantity: string; rate: string }[]; discount: string; taxBps: number; notes: string };
 export type InvoiceRecord = { invoiceId: Hex; owner: Address; handle?: string; state: string; input: InvoiceInput; billing?: Billing; totals: { lineTotals: string[]; subtotal: string; discount: string; tax: string; total: string }; detailsHash?: Hex; contract?: Address; url?: string; payer?: string; fundedTx?: Hex; settlementTx?: Hex };
 export type InvoiceConfig = { configured: boolean; contract?: Address; admin: Address; chainId: number; rpcUrl: string };

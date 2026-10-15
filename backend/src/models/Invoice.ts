@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 const schema = new mongoose.Schema({
   invoiceId: { type: String, unique: true, required: true },
   owner: { type: String, required: true, index: true },
+  // A sparse key protects new/edited invoice numbers without reindexing legacy labels.
+  numberKey: { type: String, unique: true, sparse: true },
   handle: String,
   state: { type: String, enum: ['draft', 'open', 'cancelling', 'cancelled', 'funded', 'paid', 'recovered'], default: 'draft' },
   input: { type: mongoose.Schema.Types.Mixed, required: true },
@@ -21,3 +23,8 @@ export const InvoiceBusiness = mongoose.model('InvoiceBusiness', new mongoose.Sc
   owner: { type: String, unique: true, required: true },
   details: { type: mongoose.Schema.Types.Mixed, required: true },
 }, { timestamps: true }));
+// Persist the high-water mark even when a cancelled invoice is deleted.
+export const InvoiceSequence = mongoose.model('InvoiceSequence', new mongoose.Schema({
+  owner: { type: String, unique: true, required: true },
+  value: { type: Number, required: true, default: 0 },
+}));

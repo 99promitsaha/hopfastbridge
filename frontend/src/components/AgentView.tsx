@@ -170,7 +170,7 @@ export function AgentView({ onBack, initialHandle = '', initialTab = 'send', wal
         <button className={tab === 'receive' ? 'active' : ''} onClick={() => setTab('receive')} role="tab" aria-selected={tab === 'receive'}><QrCode size={15} /> Receive</button>
         <button className={tab === 'mine' ? 'active' : ''} onClick={() => setTab('mine')} role="tab" aria-selected={tab === 'mine'}><WalletCards size={15} /> Activity</button>
       </div><div className="hf-invoice-launch-group"><button type="button" className="hf-invoice-launch" aria-pressed={tab === 'invoices'} onClick={() => setTab('invoices')}><FileText size={16} /> Invoices<span className="hf-invoice-new">New</span></button><small>*for freelancers.</small></div></div>
-      <div className="hf-payment-panel" hidden={tab !== 'invoices'}><InvoiceWorkspace wallet={wallet} onConnect={onConnect} /></div>
+      <div className="hf-payment-panel" hidden={tab !== 'invoices'}><InvoiceWorkspace wallet={wallet} onConnect={onConnect} onReceive={() => setTab('receive')} active={tab === 'invoices'} /></div>
       <div className="hf-payment-panel" hidden={tab !== 'mine'}><ArchitectDeposits key={wallet?.address.toLowerCase() || 'disconnected'} config={config} wallet={wallet} /></div>
       <div className="hf-payment-panel" hidden={tab !== 'receive'}><PaymentIdentity wallet={wallet} onConnect={onConnect} /></div>
       {tab === 'send' && (profileLinkHandle ? (
