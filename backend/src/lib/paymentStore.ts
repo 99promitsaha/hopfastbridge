@@ -15,9 +15,14 @@ const hash = (token: string) => createHash('sha256').update(token).digest();
 const file = resolve(env.PAYMENT_STORE_PATH);
 mkdirSync(dirname(file), { recursive: true, mode: 0o700 });
 const payments: Record<string, Payment> = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : {};
+export class PaymentCapacityError extends Error {
+  constructor(message: string, public status = 429) { super(message); }
+}
 function save() {
-  writeFileSync(file + '.tmp', JSON.stringify(payments), { mode: 0o600 });
-  renameSync(file + '.tmp', file);
+  try {
+    writeFileSync(file + '.tmp', JSON.stringify(payments), { mode: 0o600 });
+    renameSync(file + '.tmp', file);
+  } catch { throw new PaymentCapacityError('Payment storage is temporarily unavailable. Please retry.', 503); }
 }
 export function publicPayment(payment: Payment) {
   const { tokenHash: _tokenHash, ...rest } = payment;
@@ -25,7 +30,16 @@ export function publicPayment(payment: Payment) {
 }
 export function createPayment(input: { walletAddress: string; recipient: string; amount: string; recipientHandle?: string; memo?: string }) {
   if (!validAddress(input.walletAddress) || !validAddress(input.recipient)) throw new Error('Invalid wallet or recipient.');
+  if ((input.memo?.length ?? 0) > 180 || (input.recipientHandle && !/^[A-Za-z0-9_]{1,15}$/.test(input.recipientHandle))) throw new Error('Invalid payment details.');
   const value = parseUsdc(input.amount).toString();
+  const records = Object.values(payments), now = Date.now();
+  const active = records.filter(payment => payment.status === 'awaiting_approval' && Date.parse(payment.expiresAt) > now);
+  const recent = records.filter(payment => Date.parse(payment.createdAt) > now - 3600000);
+  // These limits are derived from persisted records, so restarting the API or
+  // rotating client IPs does not reset the global creation allowance.
+  if (recent.length >= env.PAYMENT_CREATION_PER_HOUR || recent.filter(payment => Date.parse(payment.createdAt) > now - 60000).length >= env.PAYMENT_CREATION_PER_MINUTE) throw new PaymentCapacityError('Payment request creation is busy. Please try again shortly.');
+  if (active.length >= env.PAYMENT_MAX_ACTIVE || active.filter(payment => payment.walletAddress === input.walletAddress.toLowerCase()).length >= env.PAYMENT_MAX_ACTIVE_PER_WALLET) throw new PaymentCapacityError('Too many unpaid payment requests. Finish an existing request or wait for it to expire.');
+  if (records.length >= env.PAYMENT_MAX_RECORDS) throw new PaymentCapacityError('Payment request storage has reached capacity. Existing payments remain available.', 503);
   const token = randomBytes(32).toString('hex');
   const id = randomUUID();
   const payment: Payment = {
@@ -33,7 +47,12 @@ export function createPayment(input: { walletAddress: string; recipient: string;
     recipientHandle: input.recipientHandle?.toLowerCase(),
     value, memo: input.memo ?? '', chainId: ARC_CHAIN_ID, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 15 * 60000).toISOString(), status: 'awaiting_approval'
   };
-  payments[id] = payment; save();
+  // Reserve room for tracking information on every unsigned request. Never
+  // prune requests: a wallet may have broadcast before recording its hash.
+  const bytes = Buffer.byteLength(JSON.stringify({ ...payments, [id]: payment })) + (active.length + 1) * 1024;
+  if (bytes > env.PAYMENT_MAX_STORE_BYTES) throw new PaymentCapacityError('Payment request storage has reached capacity. Existing payments remain available.', 503);
+  payments[id] = payment;
+  try { save(); } catch (error) { delete payments[id]; throw error; }
   const url = new URL(env.APP_BASE_URL); url.searchParams.set('payment', id); url.hash = token;
   return { payment: publicPayment(payment), accessToken: token, reviewUrl: url.toString() };
 }

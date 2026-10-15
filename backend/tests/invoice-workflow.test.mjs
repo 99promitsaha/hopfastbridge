@@ -11,7 +11,8 @@ import mongoose from 'mongoose';
 import { privateKeyToAccount } from 'viem/accounts';
 
 process.env.NODE_ENV = 'test';
-process.env.ARC_RPC_URL = 'http://127.0.0.1:12345';
+process.env.ARC_RPC_URL = 'http://127.0.0.1:12345/private-rpc-test-token';
+process.env.INVOICE_ADMIN_ADDRESS = privateKeyToAccount('0x' + '33'.repeat(32)).address;
 process.env.INVOICE_ESCROW_ADDRESS = '';
 process.env.INVOICE_SIGNER_KEY = '';
 const { Invoice, InvoiceBusiness, InvoiceSequence } = await import('../dist/models/Invoice.js');
@@ -57,6 +58,21 @@ test('invoice workspace persists clients independently, preserves snapshots and 
     }
     const sessionA = await login(a), sessionB = await login(b);
     const client = { id: randomUUID(), name: 'Original client', email: 'client@example.com', address: 'Original address' };
+
+    await t.test('public config has no admin or private RPC, and permissions require the actual signed wallet', async () => {
+      const config = await request('/config');
+      assert.equal(config.status, 200);
+      assert.equal(config.body.rpcUrl, 'https://rpc.mainnet.arc.io');
+      assert.equal(config.body.admin, '', 'cached legacy clients retain a harmless string comparison');
+      for (const key of ['treasury', 'signer', 'authorizationSigner']) assert.equal(config.body[key], undefined);
+      assert.ok(!JSON.stringify(config.body).includes(ownerA));
+      assert.ok(!JSON.stringify(config.body).includes('private-rpc-test-token'));
+      assert.equal((await request('/access')).status, 409);
+      assert.deepEqual((await request('/access', sessionA)).body, { isAdmin: true });
+      assert.deepEqual((await request('/access?wallet=' + ownerA, sessionB)).body, { isAdmin: false });
+      assert.equal((await request('/workspace', sessionA)).body.isAdmin, true);
+      assert.equal((await request('/workspace', sessionB)).body.isAdmin, false);
+    });
 
     await t.test('clients save before business setup, reload immediately and remain private', async () => {
       assert.notEqual((await request('/clients', '', client)).status, 201);
@@ -163,7 +179,7 @@ test('invoice workspace persists clients independently, preserves snapshots and 
       const before = (await request('/business', sessionA)).body.details;
       for (const session of ['', 'ff'.repeat(32), expired]) {
         for (const [route, body, method] of [
-          ['/workspace'], ['/business'], ['/business', { name: 'Attack' }, 'PUT'], ['/clients', { name: 'Attack' }],
+          ['/access'], ['/workspace'], ['/business'], ['/business', { name: 'Attack' }, 'PUT'], ['/clients', { name: 'Attack' }],
           ['/clients/' + before.clients[0].id, { name: 'Attack' }, 'PUT'], ['/clients/' + before.clients[0].id, undefined, 'DELETE'],
         ]) assert.equal((await request(route, session, body, method)).status, 409);
       }

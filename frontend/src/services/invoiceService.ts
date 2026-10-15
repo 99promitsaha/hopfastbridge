@@ -5,10 +5,11 @@ import type { PrivyWalletBridge } from '../components/WalletConnector';
 export type Billing = { name: string; email: string; address: string };
 export type SavedClient = Billing & { id: string };
 export type Business = Billing & { clients: SavedClient[] };
-export type InvoiceWorkspaceSummary = { details: Business | null; nextNumber: string; handle: string | null };
+export type InvoiceWorkspaceSummary = { details: Business | null; nextNumber: string; handle: string | null; isAdmin: boolean };
 export type InvoiceInput = { number: string; client: Billing; issueDate: string; dueDate: string; lines: { description: string; quantity: string; rate: string }[]; discount: string; taxBps: number; notes: string };
 export type InvoiceRecord = { invoiceId: Hex; owner: Address; handle?: string; state: string; input: InvoiceInput; billing?: Billing; totals: { lineTotals: string[]; subtotal: string; discount: string; tax: string; total: string }; detailsHash?: Hex; contract?: Address; url?: string; payer?: string; fundedTx?: Hex; settlementTx?: Hex };
-export type InvoiceConfig = { configured: boolean; contract?: Address; admin: Address; chainId: number; rpcUrl: string };
+export type InvoiceConfig = { configured: boolean; contract?: Address; chainId: number; rpcUrl: string };
+export type InvoiceAccess = { isAdmin: boolean };
 export type PaymentAuthorization = { invoiceId: Hex; issuer: Address; payer: Address; amount: string; detailsHash: Hex; deadline: number; signature: Hex; contract: Address; token: Address };
 const base = (import.meta.env.VITE_HOPFAST_API_BASE_URL || (['localhost', '127.0.0.1'].includes(location.hostname) ? `http://${location.hostname}:8080/api` : '/api')).replace(/\/$/, '');
 export async function invoiceApi<T>(path: string, session = '', body?: unknown, method?: string): Promise<T> {
@@ -17,10 +18,14 @@ export async function invoiceApi<T>(path: string, session = '', body?: unknown, 
 }
 const invoiceSessions = new Map<string, { token: string; expiresAt: number }>();
 export function clearInvoiceSessions() { invoiceSessions.clear(); }
+export function cachedInvoiceSession(address: string) {
+  const saved = invoiceSessions.get(address.toLowerCase());
+  return saved && saved.expiresAt > Date.now() ? saved.token : '';
+}
 export async function invoiceLogin(wallet: PrivyWalletBridge) {
   const address = wallet.address.toLowerCase();
-  const existing = invoiceSessions.get(address);
-  if (existing && existing.expiresAt > Date.now()) return existing.token;
+  const existing = cachedInvoiceSession(address);
+  if (existing) return existing;
   const challenge = await invoiceApi<{ nonce: string; message: string }>('/challenge', '', { wallet: wallet.address });
   const provider = await wallet.getEthereumProvider();
   const signature = await provider.request({ method: 'personal_sign', params: [`0x${Array.from(new TextEncoder().encode(challenge.message)).map(b => b.toString(16).padStart(2, '0')).join('')}`, wallet.address] });

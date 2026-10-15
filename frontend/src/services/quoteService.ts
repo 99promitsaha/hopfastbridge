@@ -14,6 +14,7 @@ export interface QuoteRequest {
 }
 
 export interface QuoteResult {
+  historyProof?: string;
   id: string;
   provider: 'lifi-api' | 'squid-api' | 'relay-api' | 'mock';
   context?: {
@@ -174,6 +175,7 @@ export async function getSwapQuote(
       fallbackFrom?: string;
       warnings?: string[];
       quotes?: Array<{
+        historyProof?: string;
         id: string;
         provider?: ProviderKey;
         context?: QuoteResult['context'];
@@ -242,6 +244,7 @@ export async function getSwapQuote(
       : undefined;
 
     return {
+      historyProof: quote.historyProof,
       id: quote.id,
       provider: `${provider}-api` as QuoteResult['provider'],
       context: quote.context,

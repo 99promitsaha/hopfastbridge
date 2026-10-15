@@ -13,13 +13,18 @@ const transactionHistorySchema = new Schema(
     amount: { type: String, required: true },
     volumeUsd: { type: Number },
     status: { type: String, default: 'submitted' },
-    metadata: { type: Schema.Types.Mixed }
+    metadata: { type: Schema.Types.Mixed },
+    verificationKey: { type: String },
+    proofVersion: { type: Number },
+    sourceConfirmed: { type: Boolean },
+    verification: { type: Schema.Types.Mixed, select: false }
   },
   { timestamps: true }
 );
 
 transactionHistorySchema.index({ userAddress: 1, createdAt: -1 });
 transactionHistorySchema.index({ userAddress: 1, txHash: 1 }, { unique: true });
+transactionHistorySchema.index({ verificationKey: 1 }, { unique: true, sparse: true });
 
 export const TransactionHistory =
   mongoose.models.TransactionHistory || model('TransactionHistory', transactionHistorySchema);

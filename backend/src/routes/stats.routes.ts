@@ -8,7 +8,7 @@ router.get('/stats', async (req, res) => {
   const payments = settledPaymentStats();
   if (!isDatabaseReady()) return res.json({ period, uniqueUsers: 0, swapVolumeUsd: 0, swapCount: 0, protocolFeeUsd: 0, cumulativePaymentsSettledUsd: payments.volumeUsd, cumulativePaymentsSettledCount: payments.count });
   const days = period === 'all' ? null : Number(period.slice(0, -1));
-  const filter = days == null ? {} : { createdAt: { $gte: new Date(Date.now() - days * 86400000) } };
+  const filter = { proofVersion: 1, sourceConfirmed: true, status: 'completed', ...(days == null ? {} : { createdAt: { $gte: new Date(Date.now() - days * 86400000) } }) };
   try {
   const [stats, users] = await Promise.all([
     TransactionHistory.aggregate([{ $match: filter }, { $group: { _id: null, total: { $sum: { $ifNull: ['$volumeUsd', 0] } }, count: { $sum: 1 } } }]),

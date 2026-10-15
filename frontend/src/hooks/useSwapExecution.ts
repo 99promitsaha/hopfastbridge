@@ -3,6 +3,7 @@ import type { PrivyWalletBridge } from '../components/WalletConnector';
 import type { QuoteResult } from '../services/quoteService';
 import {
   pollTransactionStatus,
+  fetchTransactionStatus,
   stageToProgress,
   type TxStatusResult,
 } from '../services/transactionStatusService';
@@ -82,33 +83,30 @@ export function useSwapExecution(
     async (
       txHash: string,
       address: string,
-      quoteId: string,
       draft: SwapDraft,
       provider: string,
-      volumeUsd?: number,
-      tracking?: { quoteId?: string; requestId?: string }
+      tracking?: { quoteId?: string; requestId?: string },
+      historyProof?: string
     ) => {
-      try {
-        await fetch(`${API_BASE_URL}/swaps`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userAddress: address,
-            quoteId,
-            fromChain: draft.fromChain,
-            toChain: draft.toChain,
-            fromTokenSymbol: draft.fromTokenSymbol,
-            toTokenSymbol: draft.toTokenSymbol,
-            amount: draft.amount,
-            ...(volumeUsd != null && { volumeUsd }),
-            status: 'submitted',
-            txHash,
-            provider,
-            metadata: { txHash, provider, ...tracking },
-          }),
-        });
-      } catch {
-        /* non-critical */
+      if (!historyProof) return;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        try {
+          const response = await fetch(`${API_BASE_URL}/swaps`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userAddress: address, txHash, historyProof }),
+            signal: AbortSignal.timeout(12000),
+          });
+          if (response.ok) {
+            // A very fast provider may finish the UI poll before history inserts.
+            await fetchTransactionStatus(txHash, provider, draft.fromChain, draft.toChain, tracking).catch(() => {});
+            return;
+          }
+          if (![425, 503].includes(response.status)) return;
+        } catch {
+          /* Recording can retry; a broadcast swap must never be sent twice. */
+        }
+        if (attempt < 5) await new Promise(resolve => setTimeout(resolve, 2000 * (attempt + 1)));
       }
     },
     []
@@ -124,7 +122,7 @@ export function useSwapExecution(
       hasPrivy: boolean,
       isAuthenticated: boolean,
       isAmountInsufficient: boolean,
-      volumeUsd?: number
+      _volumeUsd?: number
     ) => {
       if (executionInFlightRef.current) return;
       if (!walletBridge) {
@@ -279,14 +277,13 @@ export function useSwapExecution(
           draft.toChain,
           bestQuote.tracking
         );
-        await recordSwap(
+        void recordSwap(
           txHash,
           walletBridge.address,
-          bestQuote.id,
           draft,
           bestQuote.provider,
-          volumeUsd,
-          bestQuote.tracking
+          bestQuote.tracking,
+          bestQuote.historyProof
         );
 
         onPostSwap();

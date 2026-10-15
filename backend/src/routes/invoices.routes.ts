@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { createPublicClient, decodeEventLog, http, type Address, type Hex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { env } from '../config/env.js';
+import { PUBLIC_ARC_RPC_URL } from '../lib/arc.js';
 import { isDatabaseReady } from '../config/db.js';
 import { authenticate } from './architects.routes.js';
 import { ArchitectAuth, PaymentProfile } from '../models/ArchitectEnvelope.js';
@@ -67,7 +68,16 @@ async function sync(doc: any) {
   }
   return await Invoice.findById(doc._id);
 }
-router.get('/invoices/config', wrap(async (_req, res) => { res.json({ configured: Boolean(env.INVOICE_ESCROW_ADDRESS && env.INVOICE_SIGNER_KEY), contract: env.INVOICE_ESCROW_ADDRESS, admin: env.INVOICE_ADMIN_ADDRESS, chainId: env.ARCHITECT_CHAIN_ID, rpcUrl: env.ARC_RPC_URL }); }));
+router.get('/invoices/config', wrap(async (_req, res) => {
+  res.json({ configured: Boolean(env.INVOICE_ESCROW_ADDRESS && env.INVOICE_SIGNER_KEY), contract: env.INVOICE_ESCROW_ADDRESS,
+    // Keep an empty string for cached older clients that call .toLowerCase().
+    // No operational wallet is disclosed; current clients use signed /access.
+    admin: '', chainId: env.ARCHITECT_CHAIN_ID, rpcUrl: PUBLIC_ARC_RPC_URL });
+}));
+router.get('/invoices/access', wrap(async (req, res) => {
+  const wallet = await owner(req);
+  res.json({ isAdmin: wallet === env.INVOICE_ADMIN_ADDRESS.toLowerCase() });
+}));
 router.post('/invoices/challenge', wrap(async (req, res) => {
   const wallet = z.string().regex(/^0x[0-9a-fA-F]{40}$/).refine(v => !/^0x0{40}$/i.test(v)).parse(req.body.wallet).toLowerCase();
   const nonce = randomBytes(32).toString('hex');
@@ -125,7 +135,7 @@ router.get('/invoices/workspace', wrap(async (req, res) => {
   const [business, profile, floor] = await Promise.all([
     InvoiceBusiness.findOne({ owner: wallet }), PaymentProfile.findOne({ wallet }), numberFloor(wallet),
   ]);
-  res.json({ details: business?.details ?? null, nextNumber: floor < Number.MAX_SAFE_INTEGER - 1 ? formatInvoiceNumber(floor + 1) : '', handle: profile?.handle ?? null });
+  res.json({ details: business?.details ?? null, nextNumber: floor < Number.MAX_SAFE_INTEGER - 1 ? formatInvoiceNumber(floor + 1) : '', handle: profile?.handle ?? null, isAdmin: wallet === env.INVOICE_ADMIN_ADDRESS.toLowerCase() });
 }));
 router.post('/invoices/clients', wrap(async (req, res) => {
   const wallet = await owner(req);

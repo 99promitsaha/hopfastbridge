@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
 export const ARC_CHAIN_ID = 5042;
+export const PUBLIC_ARC_RPC_URL = 'https://rpc.mainnet.arc.io';
 export const ARC_EXPLORER = 'https://explorer.arc.io';
 export const ADDRESS = /^0x[\da-fA-F]{40}$/;
 export function validAddress(value: string): boolean {

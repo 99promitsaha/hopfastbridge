@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Wallet } from '../models/Wallet.js';
 import { isDatabaseReady } from '../config/db.js';
+import { safePublicRoute } from '../lib/publicResponses.js';
 
 const router = Router();
 
@@ -9,7 +10,7 @@ const walletSchema = z.object({
   address: z.string().regex(/^0x[a-fA-F0-9]{40}$/, 'Invalid wallet address')
 });
 
-router.post('/wallets', async (req, res) => {
+router.post('/wallets', safePublicRoute(async (req, res) => {
   if (!isDatabaseReady()) {
     return res.status(503).json({ error: 'Database unavailable.' });
   }
@@ -25,7 +26,7 @@ router.post('/wallets', async (req, res) => {
     { upsert: true, new: true }
   );
 
-  return res.status(200).json(wallet);
-});
+  return res.status(200).json({ address: wallet.address });
+}));
 
 export default router;

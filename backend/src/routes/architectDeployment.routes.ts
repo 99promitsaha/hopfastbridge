@@ -12,6 +12,7 @@ import {
 import { privateKeyToAccount } from "viem/accounts";
 import { z } from "zod";
 import { env } from "../config/env.js";
+import { PUBLIC_ARC_RPC_URL } from "../lib/arc.js";
 import artifact from "../contracts/ArchitectEscrow.json" with { type: "json" };
 const router = Router();
 const nonce = randomBytes(32).toString("hex");
@@ -64,7 +65,7 @@ router.get("/architect-deployment", async (_req, res) => {
       ...plan,
       nonce,
       chainId: 5042,
-      rpcUrl: env.ARC_RPC_URL,
+      rpcUrl: PUBLIC_ARC_RPC_URL,
       existingContract: env.ARCHITECT_ESCROW_ADDRESS,
       gas: gasLimit.toString(),
       maxFeePerGas: maxFeePerGas.toString(),

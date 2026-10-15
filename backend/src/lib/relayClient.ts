@@ -184,7 +184,7 @@ export async function requestRelayQuote(payload: Payload) {
   executionQuotes.set(raw.requestId, quote);
   return {
     provider: 'relay' as const, requestId: raw.requestId,
-    quotes: [{ id: raw.requestId, provider: 'relay', routeSteps: [{ type: 'Relay' }],
+    quotes: [{ id: raw.requestId, provider: 'relay', sourceAmountUsd: raw.details.currencyIn.amountUsd, routeSteps: [{ type: 'Relay' }],
       ...quote, duration: { estimated: String(Math.max(1000, (raw.details.timeEstimate ?? 30) * 1000)) },
       userSteps: [{ type: 'TRANSACTION', action: 'Deposit into Relay escrow.', transaction: quote.transaction }],
     }],

@@ -12,6 +12,8 @@ import { requestLiFiQuote } from '../lib/lifiClient.js';
 import { requestSquidQuote } from '../lib/squidClient.js';
 import { requestRelayQuote, relayExecutionQuote } from '../lib/relayClient.js';
 import { env } from '../config/env.js';
+import { publicQuoteResponse } from '../lib/publicResponses.js';
+import { issueHistoryProof } from '../lib/swapVerification.js';
 
 const router = Router();
 
@@ -36,9 +38,12 @@ export async function requestProvider(
   const key = `${provider}:${JSON.stringify(payload)}`;
   const existing = inFlightQuotes.get(key);
   if (existing) return existing;
-  const request = provider === 'relay' ? requestRelayQuote(payload) : provider === 'squid'
+  const upstream = provider === 'relay' ? requestRelayQuote(payload) : provider === 'squid'
     ? requestSquidQuote(payload)
     : requestLiFiQuote(payload);
+  const request = upstream.then(result => ({ ...result, quotes: result.quotes.map(quote => ({
+    ...quote, historyProof: issueHistoryProof(provider, payload, quote, (result as { requestId?: string }).requestId),
+  })) }));
   inFlightQuotes.set(key, request);
   try {
     return await request;
@@ -88,11 +93,11 @@ router.post('/quotes/compare', quoteLimiter, async (req, res) => {
     requested,
     input
   );
-  return res.json({
+  return res.json(publicQuoteResponse({
     ...result,
     observedAt: new Date().toISOString(),
     warning: 'Estimates can change before signing.',
-  });
+  }));
 });
 // Recheck a server-validated, short-lived quote immediately before approval/signing.
 router.post('/quotes/relay/validate', quoteLimiter, (req, res) => {
@@ -139,17 +144,14 @@ router.post('/quotes', quoteLimiter, async (req, res) => {
     // their own clients; Relay fees/recipients can never be overridden by a caller.
     const quote = await requestProvider(provider as Provider, { ...parsed.data, options: req.body.options });
 
-    return res.json(quote);
+    return res.json(publicQuoteResponse(quote));
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error);
-    console.error(`[quotes] ${provider} error:`, msg);
+    console.error(`[quotes] ${provider} request failed (${error instanceof Error ? error.name : 'UnknownError'}).`);
     const isClient =
       error instanceof Error && /missing|invalid|unsupported/i.test(msg);
     return res.status(isClient ? 400 : 502).json({
-      error: isClient
-        ? msg
-        : `Quote request to ${provider} failed. Please try again.`,
-      detail: process.env.NODE_ENV === 'development' ? msg : undefined,
+      error: `Quote request to ${provider} failed. Refresh the route or try another provider.`,
     });
   }
 });

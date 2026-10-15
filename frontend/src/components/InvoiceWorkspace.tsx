@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, Copy, Download, FileText, Plus, Settings2, Trash2 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { isAddress, keccak256, stringToHex } from 'viem';
-import { invoiceApi, invoiceLogin, invoiceWrite, usdc, type Billing, type Business, type InvoiceConfig, type InvoiceInput, type InvoiceRecord, type PaymentAuthorization, type SavedClient, type InvoiceWorkspaceSummary } from '../services/invoiceService';
+import { invoiceApi, invoiceLogin, invoiceWrite, cachedInvoiceSession, usdc, type Billing, type Business, type InvoiceConfig, type InvoiceAccess, type InvoiceInput, type InvoiceRecord, type PaymentAuthorization, type SavedClient, type InvoiceWorkspaceSummary } from '../services/invoiceService';
 import type { PrivyWalletBridge } from './WalletConnector';
 
 export function InvoiceWorkspace({ wallet, onConnect, onReceive, active = true }: { wallet: PrivyWalletBridge | null; onConnect?: () => void; onReceive?: () => void; active?: boolean }) {
@@ -89,7 +89,7 @@ export function InvoiceWorkspace({ wallet, onConnect, onReceive, active = true }
   }
   function applyWorkspace(result: InvoiceWorkspaceSummary) {
     const details = normalizeBusiness(result.details);
-    setBusiness(details); setHasIdentity(Boolean(result.handle));
+    setBusiness(details); setHasIdentity(Boolean(result.handle)); setAdmin(result.isAdmin === true);
     setSelectedClientId(id => details.clients.some(client => client.id === id) ? id : '');
     return details;
   }
@@ -98,9 +98,9 @@ export function InvoiceWorkspace({ wallet, onConnect, onReceive, active = true }
     await perform(async current => {
       const token = await invoiceLogin(wallet);
       if (!current()) return;
-      const [result, config] = await Promise.all([invoiceApi<InvoiceWorkspaceSummary>('/workspace', token), invoiceApi<InvoiceConfig>('/config')]);
+      const result = await invoiceApi<InvoiceWorkspaceSummary>('/workspace', token);
       if (!current()) return;
-      applyWorkspace(result); setAdmin(config.admin.toLowerCase() === wallet.address.toLowerCase());
+      applyWorkspace(result);
       setAdminMode(false); setSession(token); await load(token, 0, false);
     });
   }
@@ -266,12 +266,32 @@ function InvoiceCheckout({ id, wallet, onConnect }: { id: string; wallet: PrivyW
   const [invoice, setInvoice] = useState<InvoiceRecord | null>(null), [config, setConfig] = useState<InvoiceConfig | null>(null);
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [busy, setBusy] = useState(false), [review, setReview] = useState(false);
   const [recoveryRecipient, setRecoveryRecipient] = useState(''), [recoveryReason, setRecoveryReason] = useState('');
+  const [access, setAccess] = useState<(InvoiceAccess & { wallet: string }) | null>(null);
   const addressRef = useRef(wallet?.address.toLowerCase()); addressRef.current = wallet?.address.toLowerCase();
   async function refresh() { const result = await invoiceApi<{ invoice: InvoiceRecord }>(`/${id}`); setInvoice(result.invoice); }
   useEffect(() => { let active = true; setInvoice(null); setReview(false); setError(''); Promise.all([invoiceApi<{ invoice: InvoiceRecord }>(`/${id}`), invoiceApi<InvoiceConfig>('/config')]).then(([record, settings]) => { if (active) { setInvoice(record.invoice); setConfig(settings); } }).catch(e => { if (active) setError(e.message); }); return () => { active = false; }; }, [id]);
-  useEffect(() => { setReview(false); }, [wallet?.address]);
+  useEffect(() => {
+    let current = true;
+    setReview(false); setAccess(null);
+    const address = wallet?.address.toLowerCase();
+    const session = address ? cachedInvoiceSession(address) : '';
+    if (address && session) void invoiceApi<InvoiceAccess>('/access', session).then(result => {
+      if (current && addressRef.current === address) setAccess({ wallet: address, isAdmin: result.isAdmin === true });
+    }).catch(() => {});
+    return () => { current = false; };
+  }, [id, wallet?.address, invoice?.state]);
   useEffect(() => { if (!invoice || !['open', 'funded', 'cancelling'].includes(invoice.state)) return; const timer = setInterval(() => { if (document.visibilityState === 'visible' && !busy) void refresh().catch(() => {}); }, 20000); return () => clearInterval(timer); }, [id, invoice?.state, busy]);
   async function act(action: () => Promise<void>) { setBusy(true); setError(''); setNotice(''); try { await action(); } catch (e) { setError(e instanceof Error ? e.message : 'Please try again.'); } finally { setBusy(false); } }
+  async function unlockTools() {
+    if (!wallet) return;
+    const address = wallet.address.toLowerCase();
+    await act(async () => {
+      const session = await invoiceLogin(wallet);
+      if (addressRef.current !== address) return;
+      const result = await invoiceApi<InvoiceAccess>('/access', session);
+      if (addressRef.current === address) setAccess({ wallet: address, isAdmin: result.isAdmin === true });
+    });
+  }
   async function pay() {
     if (!wallet || !invoice || !config) return;
     await act(async () => { const session = await invoiceLogin(wallet); if (addressRef.current !== wallet.address.toLowerCase()) throw new Error('Wallet changed. Review the payment again.'); const authorization = await invoiceApi<PaymentAuthorization>(`/${id}/authorize`, session, {});
@@ -286,6 +306,7 @@ function InvoiceCheckout({ id, wallet, onConnect }: { id: string; wallet: PrivyW
   function receipt() { if (!invoice) return; const data = JSON.stringify({ type: 'Hopfast invoice receipt', invoiceNumber: invoice.input.number, invoiceId: invoice.invoiceId, invoicer: invoice.handle, client: invoice.input.client.name, totalUSDC: usdc(invoice.totals.total), state: invoice.state, payer: invoice.payer, contract: invoice.contract, paymentTransaction: invoice.fundedTx, settlementTransaction: invoice.settlementTx }, null, 2); const url = URL.createObjectURL(new Blob([data], { type: 'application/json' })); const a = document.createElement('a'); a.href = url; a.download = `hopfast-invoice-${invoice.invoiceId.slice(2, 10)}.json`; a.click(); URL.revokeObjectURL(url); }
   if (!invoice) return error ? <div className="hf-invoice-empty"><FileText size={28} /><h3>Invoice unavailable</h3><TransientError message={error} /></div> : <LoadingState label="Loading invoice…" />;
   const issuer = wallet?.address.toLowerCase() === invoice.owner;
+  const accessReady = Boolean(access && access.wallet === wallet?.address.toLowerCase());
   const fee = (BigInt(invoice.totals.total) * 50n + 9999n) / 10000n;
   return <div className="hf-invoice-checkout"><InvoicePaper invoice={invoice} /><aside className="hf-invoice-pay-panel">
     {review ? <><h3>Review payment</h3><p>Invoice {invoice.input.number} for {invoice.handle}@hopfast.</p><dl><div><dt>You pay</dt><dd><UsdcAmount value={usdc(invoice.totals.total)} /></dd></div><div><dt><span tabIndex={0} className="hf-invoice-fee-hint">Hopfast fee · 0.5%<span role="tooltip">helps us keep the lights on and maintain the infra.</span></span></dt><dd><UsdcAmount value={usdc(fee)} /></dd></div><div><dt>Invoicer receives</dt><dd><UsdcAmount value={usdc(BigInt(invoice.totals.total) - fee)} /></dd></div></dl><p className="hf-invoice-small">Check the recipient, invoice details and total before confirming your payment.</p><details className="hf-invoice-small"><summary>How payment works</summary><p>Funds stay in escrow until the invoicer releases them. Hopfast’s administrator can recover funds still held in escrow. Network gas is separate.</p></details><button className="hf-invoice-primary" disabled={busy} onClick={() => void pay()}>{busy ? 'Follow the wallet prompts…' : 'Confirm in wallet'} {busy ? <LoadingSpinner /> : <ArrowRight size={16} />}</button><button className="hf-invoice-secondary" disabled={busy} onClick={() => setReview(false)}>Back to invoice</button></> : <>
@@ -295,7 +316,8 @@ function InvoiceCheckout({ id, wallet, onConnect }: { id: string; wallet: PrivyW
       {invoice.state === 'open' && <button className="hf-invoice-primary" disabled={busy || !config?.configured} onClick={() => wallet ? setReview(true) : onConnect?.()}>{wallet ? 'Review payment' : 'Connect wallet to pay'} <ArrowRight size={16} /></button>}
       {invoice.state === 'funded' && issuer && <button className="hf-invoice-primary" disabled={busy} onClick={() => void release()}>{busy ? 'Releasing…' : 'Release to your wallet'} {busy ? <LoadingSpinner /> : <ArrowRight size={16} />}</button>}
       {invoice.state === 'paid' && <button className="hf-invoice-secondary" onClick={receipt}><Download size={16} /> Download receipt</button>}
-      {invoice.state === 'funded' && wallet?.address.toLowerCase() === config?.admin.toLowerCase() && <div className="hf-invoice-admin"><h3>Admin recovery</h3><p>Recover the full amount still held for this invoice. The destination and reason hash are recorded onchain.</p><label>Recovery wallet<input value={recoveryRecipient} placeholder={invoice.payer || '0x…'} onChange={e => setRecoveryRecipient(e.target.value)} /></label><button className="hf-invoice-secondary" onClick={() => setRecoveryRecipient(invoice.payer || '')}>Use payer wallet</button><label>Reason<input maxLength={300} value={recoveryReason} placeholder="Reason for recovery" onChange={e => setRecoveryReason(e.target.value)} /></label><button className="hf-invoice-primary" disabled={busy || !isAddress(recoveryRecipient) || /^0x0{40}$/i.test(recoveryRecipient) || !recoveryReason.trim()} onClick={() => void recover()}>{busy ? <><LoadingSpinner /> Recovering…</> : 'Recover full funds'}</button></div>}
+      {invoice.state === 'funded' && wallet && !accessReady && <button className="hf-invoice-secondary" disabled={busy} onClick={() => void unlockTools()}>{busy ? <LoadingSpinner /> : null} Unlock invoice tools</button>}
+      {invoice.state === 'funded' && accessReady && access?.isAdmin && <div className="hf-invoice-admin"><h3>Admin recovery</h3><p>Recover the full amount still held for this invoice. The destination and reason hash are recorded onchain.</p><label>Recovery wallet<input value={recoveryRecipient} placeholder={invoice.payer || '0x…'} onChange={e => setRecoveryRecipient(e.target.value)} /></label><button className="hf-invoice-secondary" onClick={() => setRecoveryRecipient(invoice.payer || '')}>Use payer wallet</button><label>Reason<input maxLength={300} value={recoveryReason} placeholder="Reason for recovery" onChange={e => setRecoveryReason(e.target.value)} /></label><button className="hf-invoice-primary" disabled={busy || !isAddress(recoveryRecipient) || /^0x0{40}$/i.test(recoveryRecipient) || !recoveryReason.trim()} onClick={() => void recover()}>{busy ? <><LoadingSpinner /> Recovering…</> : 'Recover full funds'}</button></div>}
       {issuer && invoice.state === 'open' && <button className="hf-invoice-secondary" disabled={busy} onClick={() => void act(async () => { const session = await invoiceLogin(wallet!); await invoiceApi(`/${id}/cancel`, session, {}); await refresh(); })}>{busy ? <><LoadingSpinner /> Cancelling…</> : 'Cancel unpaid invoice'}</button>}
     </>}
     {invoice.fundedTx && <a className="hf-invoice-small" target="_blank" rel="noreferrer" href={`https://explorer.arc.io/tx/${invoice.fundedTx}`}>View payment transaction ↗</a>}{invoice.settlementTx && <a className="hf-invoice-small" target="_blank" rel="noreferrer" href={`https://explorer.arc.io/tx/${invoice.settlementTx}`}>View settlement transaction ↗</a>}

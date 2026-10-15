@@ -2,17 +2,21 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { assertArcNetwork, arcRpc, formatUsdc, validAddress } from '../lib/arc.js';
-import { createPayment, getPayment, publicPayment, refreshPayment, submitPayment, cancelPayment } from '../lib/paymentStore.js';
+import { createPayment, getPayment, publicPayment, refreshPayment, submitPayment, cancelPayment, PaymentCapacityError } from '../lib/paymentStore.js';
 const router = Router();
 const address = z.string().refine(validAddress);
 const schema = z.object({ walletAddress: address, recipient: address, amount: z.string().max(50), recipientHandle: z.string().regex(/^[A-Za-z0-9_]{1,15}$/).optional(), memo: z.string().max(180).optional() }).strict();
 router.use(['/payments', '/arc/balance'], rateLimit({ windowMs: 60000, limit: 30, standardHeaders: true, legacyHeaders: false }));
 router.use('/payments', (_req, res, next) => { res.setHeader('Cache-Control', 'no-store'); next(); });
-router.post('/payments', (req, res) => {
+const creationLimiter = rateLimit({ windowMs: 60000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many new payment requests. Existing payments can still be checked.' } });
+router.post('/payments', creationLimiter, (req, res) => {
   const parsed = schema.safeParse(req.body);
   if (!parsed.success) return res.status(400).json({ error: 'Invalid payment details.' });
   try { return res.status(201).json(createPayment(parsed.data)); }
-  catch (error) { return res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid payment.' }); }
+  catch (error) {
+    if (error instanceof PaymentCapacityError) { res.setHeader('Retry-After', '60'); return res.status(error.status).json({ error: error.message }); }
+    return res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid payment.' });
+  }
 });
 router.get('/arc/balance/:address', async (req, res) => {
   if (!validAddress(req.params.address)) return res.status(400).json({ error: 'Invalid address.' });

@@ -1,9 +1,10 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { env } from '../config/env.js';
 import { isDatabaseReady } from '../config/db.js';
 import { TransactionHistory } from '../models/TransactionHistory.js';
-import { SwapRecord } from '../models/SwapRecord.js';
 import { fetchRelayStatus } from '../lib/relayClient.js';
+import { verifySource } from '../lib/swapVerification.js';
 
 const router = Router();
 
@@ -71,7 +72,7 @@ async function fetchLiFiStatus(
   const subCode = data.substatus?.toUpperCase();
 
   let status: StatusResult['status'];
-  if (lifiStatus === 'DONE') {
+  if (lifiStatus === 'DONE' && data.sending?.txHash?.toLowerCase() === txHash.toLowerCase()) {
     status = 'completed';
   } else if (lifiStatus === 'FAILED' || lifiStatus === 'INVALID') {
     // INVALID per LI.FI docs = "hash isn't associated with the requested tool".
@@ -171,9 +172,11 @@ async function fetchSquidStatus(
   };
 }
 
-async function persistTrackedStatus(txHash: string, result: StatusResult) {
-  if (!isDatabaseReady()) return;
-
+async function persistTrackedStatus(record: any, result: StatusResult) {
+  if (!record) return;
+  const source = await verifySource(record.verification, record.txHash);
+  if (source.status === 'failed') result.status = 'failed';
+  else if (!source.sourceConfirmed) result.status = 'confirming';
   const status = result.status;
   const statusDetail = {
     status,
@@ -184,32 +187,26 @@ async function persistTrackedStatus(txHash: string, result: StatusResult) {
     checkedAt: new Date().toISOString(),
   };
 
-  await Promise.all([
-    TransactionHistory.updateMany(
-      { txHash: txHash.toLowerCase() },
-      { $set: { status, 'metadata.statusTracking': statusDetail } }
-    ),
-    SwapRecord.updateMany(
-      { txHash: txHash.toLowerCase() },
-      { $set: { status, 'metadata.statusTracking': statusDetail } }
-    ),
-  ]);
+  await TransactionHistory.updateOne(
+    { _id: record._id, proofVersion: 1, status: { $nin: ['completed', 'failed'] } },
+    { $set: { status, sourceConfirmed: source.sourceConfirmed, 'metadata.statusTracking': statusDetail } }
+  );
 }
 
-router.get('/status', async (req, res) => {
+router.get('/status', rateLimit({ windowMs: 60000, limit: 60, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many status checks. Please retry shortly.' } }), async (req, res) => {
   const txHash =
     typeof req.query.txHash === 'string' ? req.query.txHash : undefined;
-  const provider =
+  let provider =
     typeof req.query.provider === 'string'
       ? req.query.provider.toLowerCase()
       : undefined;
-  const fromChainKey =
+  let fromChainKey =
     typeof req.query.fromChain === 'string' ? req.query.fromChain : undefined;
-  const toChainKey =
+  let toChainKey =
     typeof req.query.toChain === 'string' ? req.query.toChain : undefined;
-  const quoteId =
+  let quoteId =
     typeof req.query.quoteId === 'string' ? req.query.quoteId : undefined;
-  const requestId =
+  let requestId =
     typeof req.query.requestId === 'string' ? req.query.requestId : undefined;
 
   if (!txHash || !provider) {
@@ -217,7 +214,21 @@ router.get('/status', async (req, res) => {
       .status(400)
       .json({ error: 'Missing required params: txHash, provider.' });
   }
+  if (!/^0x[\da-fA-F]{64}$/.test(txHash) ||
+      (fromChainKey && !Object.hasOwn(CHAIN_ID_BY_KEY, fromChainKey)) ||
+      (toChainKey && !Object.hasOwn(CHAIN_ID_BY_KEY, toChainKey)) ||
+      (quoteId && quoteId.length > 256) || (requestId && requestId.length > 256)) {
+    return res.status(400).json({ error: 'Invalid transaction status request.' });
+  }
 
+  try {
+  // Query parameters are display hints only. A recorded swap's settlement
+  // provider, route and tracking IDs come exclusively from its issued proof.
+  const record = isDatabaseReady() ? await TransactionHistory.findOne({ txHash: txHash.toLowerCase(), proofVersion: 1, ...(fromChainKey ? { fromChain: fromChainKey } : {}) }).select('+verification') : null;
+  if (record) {
+    provider = record.provider; fromChainKey = record.fromChain; toChainKey = record.toChain;
+    quoteId = record.metadata?.quoteId; requestId = record.metadata?.requestId;
+  }
   const fromChainId =
     fromChainKey && fromChainKey in CHAIN_ID_BY_KEY
       ? CHAIN_ID_BY_KEY[fromChainKey as ChainKey]
@@ -228,7 +239,6 @@ router.get('/status', async (req, res) => {
       ? CHAIN_ID_BY_KEY[toChainKey as ChainKey]
       : undefined;
 
-  try {
     let result: StatusResult;
 
     if (provider === 'lifi' || provider === 'lifi-api') {
@@ -247,13 +257,11 @@ router.get('/status', async (req, res) => {
         .json({ error: `Unsupported provider: ${provider}` });
     }
 
-    await persistTrackedStatus(txHash, result).catch((error) => {
-      console.warn('[status] unable to persist tracking update', error);
-    });
+    await persistTrackedStatus(record, result);
     return res.json(result);
   } catch (error) {
     return res.status(502).json({
-      error: error instanceof Error ? error.message : 'Status check failed.',
+      error: 'Status check is temporarily unavailable. Please retry.',
       status: 'pending',
     });
   }

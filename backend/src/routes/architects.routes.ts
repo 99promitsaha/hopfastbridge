@@ -22,8 +22,8 @@ import {
 } from "../models/ArchitectEnvelope.js";
 import { isDatabaseReady } from "../config/db.js";
 import { paymentsBySender } from "../lib/paymentStore.js";
+import { PUBLIC_ARC_RPC_URL } from "../lib/arc.js";
 const router = Router();
-const PUBLIC_ARC_RPC_URL = "https://rpc.mainnet.arc.io";
 const random = () => randomBytes(32).toString("hex");
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 const client = createPublicClient({ transport: http(env.ARC_RPC_URL) });
@@ -122,8 +122,6 @@ router.get("/architects/config", async (_req, res, next) => {
       chainId: env.ARCHITECT_CHAIN_ID,
       rpcUrl: PUBLIC_ARC_RPC_URL,
       feeBps: 250,
-      admin: env.ARCHITECT_ADMIN_ADDRESS,
-      treasury: env.ARCHITECT_TREASURY_ADDRESS,
     });
   } catch {
     res.json({

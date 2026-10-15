@@ -10,7 +10,8 @@ import ganache from 'ganache';
 import express from '../../backend/node_modules/express/index.js';
 import mongoose from '../../backend/node_modules/mongoose/index.js';
 import { BrowserProvider, ContractFactory, Contract, Wallet, keccak256, toUtf8Bytes } from 'ethers';
-test('invoice API and Mongo verify publish, funding, release, full recovery and cancellation expiry onchain', async () => {
+import { build as bundle } from '../../frontend/node_modules/esbuild/lib/main.js';
+test('frontend invoice service, API and Mongo verify wallet access, client snapshots, funding, release, recovery and cancellation onchain', async () => {
   const chain = ganache.server({ logging: { quiet: true }, chain: { chainId: 5042 } });
   const directory = await mkdtemp(path.join(os.tmpdir(), 'hopfast-invoice-e2e-'));
   let mongo, server;
@@ -42,19 +43,75 @@ test('invoice API and Mongo verify publish, funding, release, full recovery and 
     const app = express(); app.use(express.json()); app.use('/api', routes); server = app.listen(0, '127.0.0.1'); await new Promise(r => server.once('listening', r));
     const base = `http://127.0.0.1:${server.address().port}/api/invoices`;
     async function request(route, session = '', body, method) { const response = await fetch(base + route, { method: method || (body === undefined ? 'GET' : 'POST'), headers: { 'Content-Type': 'application/json', ...(session ? { Authorization: `Bearer ${session}` } : {}) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) }); const result = await response.json(); assert.ok(response.status < 300, JSON.stringify(result)); return result; }
-    async function login(account) { const wallet = new Wallet(chain.provider.getInitialAccounts()[(await account.getAddress()).toLowerCase()].secretKey); const c = await request('/challenge', '', { wallet: wallet.address }); return (await request('/session', '', { nonce: c.nonce, signature: await wallet.signMessage(c.message) })).session; }
-    const is = await login(issuer), ps = await login(payer), ads = await login(admin);
+    // Exercise the actual frontend service against isolated API/DB/chain instances.
+    const frontendModule = path.join(directory, 'invoice-service.mjs');
+    await bundle({ entryPoints: ['../frontend/src/services/invoiceService.ts'], outfile: frontendModule, bundle: true, platform: 'node', format: 'esm', define: { 'import.meta.env': JSON.stringify({ VITE_HOPFAST_API_BASE_URL: base.replace(/\/invoices$/, '') }) } });
+    const frontend = await import(frontendModule);
+    let signaturePrompts = 0;
+    async function bridge(account) {
+      const wallet = new Wallet(chain.provider.getInitialAccounts()[(await account.getAddress()).toLowerCase()].secretKey);
+      return { address: wallet.address, switchChain: async id => assert.equal(id, 5042), getEthereumProvider: async () => ({ request: async args => {
+        if (args.method === 'personal_sign') { signaturePrompts++; assert.equal(args.params[1], wallet.address); return wallet.signMessage(Buffer.from(args.params[0].slice(2), 'hex')); }
+        // Browser wallets estimate gas before broadcasting; Ganache's bare
+        // eth_sendTransaction otherwise defaults to an insufficient fixed limit.
+        if (args.method === 'eth_sendTransaction' && !args.params[0].gas) {
+          const estimate = BigInt(await chain.provider.request({ method: 'eth_estimateGas', params: args.params }));
+          return chain.provider.request({ ...args, params: [{ ...args.params[0], gas: '0x' + (estimate * 12n / 10n).toString(16) }] });
+        }
+        return chain.provider.request(args);
+      } }) };
+    }
+    const issuerBridge = await bridge(issuer), payerBridge = await bridge(payer), adminBridge = await bridge(admin);
+    const is = await frontend.invoiceLogin(issuerBridge), ps = await frontend.invoiceLogin(payerBridge), ads = await frontend.invoiceLogin(adminBridge);
+    assert.equal(signaturePrompts, 3);
+    assert.equal(await frontend.invoiceLogin(issuerBridge), is);
+    assert.equal(signaturePrompts, 3, 'navigating invoice tools reuses the signed session');
+    const config = await frontend.invoiceApi('/config');
+    assert.equal(config.admin, ''); assert.equal(config.rpcUrl, 'https://rpc.mainnet.arc.io');
+    assert.equal(JSON.stringify(config).includes((await admin.getAddress()).toLowerCase()), false);
+    const localConfig = { ...config, rpcUrl: process.env.ARC_RPC_URL };
+    assert.deepEqual(await frontend.invoiceApi('/access', ads), { isAdmin: true });
+    assert.deepEqual(await frontend.invoiceApi('/access', is), { isAdmin: false });
+    assert.deepEqual(await frontend.invoiceApi('/access?wallet=' + adminBridge.address, ps), { isAdmin: false });
+    await assert.rejects(frontend.invoiceApi('/access'), /Unlock invoices/);
+    await assert.rejects(frontend.invoiceApi('/admin', ps), /Administrator access/);
     await request('/business', is, { name: 'Freelancer', email: '', address: 'Billing address', clients: [] }, 'PUT');
-    const input = { number: 'INV-001', client: { name: 'Client' }, issueDate: '2026-10-02', dueDate: '2026-10-30', lines: [{ description: 'Development', quantity: '1', rate: '100' }] };
+    const { client: savedClient } = await frontend.invoiceApi('/clients', is, { name: 'Original client', email: 'client@example.com', address: 'Original address' });
+    assert.equal((await frontend.invoiceApi('/workspace', is)).details.clients[0].id, savedClient.id);
+    assert.equal((await frontend.invoiceApi('/workspace', ps)).details, null);
+    await assert.rejects(frontend.invoiceApi('/clients/' + savedClient.id, ps, undefined, 'DELETE'), /not found/);
+    const input = { number: 'INV-001', client: savedClient, issueDate: '2026-10-02', dueDate: '2026-10-30', lines: [{ description: 'Development', quantity: '1', rate: '100' }] };
     async function publish(number) { const { invoice: d } = await request('', is, { ...input, number }); const { invoice } = await request(`/${d.invoiceId}/publish`, is, {}); assert.match(invoice.url, /^https:\/\/www\.hopfast\.xyz\/\?invoice=/); return invoice; }
     const authorize = invoice => request(`/${invoice.invoiceId}/authorize`, ps, {});
     async function fund(invoice, a) { const tx = await escrow.connect(payer).pay(a.invoiceId, a.issuer, BigInt(a.amount), a.detailsHash, a.deadline, a.signature); await tx.wait(); return (await request(`/${invoice.invoiceId}/confirm`, ps, { txHash: tx.hash })).invoice; }
-    const first = await publish('INV-001'); assert.equal((await fund(first, await authorize(first))).state, 'funded'); assert.equal(await token.balanceOf(await admin.getAddress()), 0n);
-    const tx = await escrow.connect(issuer).release(first.invoiceId); await tx.wait(); assert.equal((await request(`/${first.invoiceId}/confirm`, is, { txHash: tx.hash })).invoice.state, 'paid'); assert.equal(await token.balanceOf(await issuer.getAddress()), 99500000n); assert.equal(await token.balanceOf(await admin.getAddress()), 500000n);
+    const first = await publish('INV-001');
+    await frontend.invoiceApi('/clients/' + savedClient.id, is, { name: 'Changed client', email: '', address: 'Changed address' }, 'PUT');
+    await frontend.invoiceApi('/clients/' + savedClient.id, is, undefined, 'DELETE');
+    const publicFirst = (await frontend.invoiceApi('/' + first.invoiceId)).invoice;
+    assert.equal(publicFirst.input.client.name, 'Original client', 'published billing snapshot survives client edits and deletion');
+    assert.equal(publicFirst.input.client.address, 'Original address');
+    assert.equal((await frontend.invoiceApi('/workspace', is)).details.clients.length, 0);
+    const authorization = await authorize(first);
+    // Reset allowance so the real frontend approval and simulation path is exercised.
+    await (await token.connect(payer).approve(await escrow.getAddress(), 0n)).wait();
+    const paidHash = await frontend.invoiceWrite(localConfig, payerBridge, authorization.contract, 'pay', [authorization.invoiceId, authorization.issuer, BigInt(authorization.amount), authorization.detailsHash, BigInt(authorization.deadline), authorization.signature]);
+    assert.equal((await frontend.invoiceApi(`/${first.invoiceId}/confirm`, ps, { txHash: paidHash })).invoice.state, 'funded');
+    assert.equal(await token.balanceOf(await admin.getAddress()), 0n);
+    await assert.rejects(frontend.invoiceWrite(localConfig, payerBridge, authorization.contract, 'release', [first.invoiceId]));
+    const releaseHash = await frontend.invoiceWrite(localConfig, issuerBridge, authorization.contract, 'release', [first.invoiceId]);
+    assert.equal((await frontend.invoiceApi(`/${first.invoiceId}/confirm`, is, { txHash: releaseHash })).invoice.state, 'paid');
+    assert.equal(await token.balanceOf(await issuer.getAddress()), 99500000n); assert.equal(await token.balanceOf(await admin.getAddress()), 500000n);
+    await assert.rejects(frontend.invoiceApi('/' + first.invoiceId, is, undefined, 'DELETE'), /cancelled/);
+    await (await token.connect(payer).approve(await escrow.getAddress(), 1000000000n)).wait();
     const second = await publish('INV-002'); await fund(second, await authorize(second)); const recovery = await escrow.recover(second.invoiceId, await payer.getAddress(), keccak256(toUtf8Bytes('Client refund'))); await recovery.wait(); assert.equal((await request(`/${second.invoiceId}/confirm`, ads, { txHash: recovery.hash })).invoice.state, 'recovered'); assert.equal(await escrow.totalEscrow(), 0n);
     const third = await publish('INV-003'), intent = await authorize(third); assert.equal((await request(`/${third.invoiceId}/cancel`, is, {})).invoice.state, 'cancelling'); assert.equal((await fund(third, intent)).state, 'funded');
     const fourth = await publish('INV-004'); await authorize(fourth); await request(`/${fourth.invoiceId}/cancel`, is, {}); await provider.send('evm_increaseTime', [121]); await provider.send('evm_mine', []); assert.equal((await request(`/${fourth.invoiceId}`)).invoice.state, 'cancelled');
     assert.equal((await request('/mine', is)).invoices.length, 4); assert.equal((await request('/admin', ads)).invoices.length, 4);
+    assert.deepEqual(await frontend.invoiceApi('/' + fourth.invoiceId, is, undefined, 'DELETE'), { deleted: true });
+    await assert.rejects(frontend.invoiceApi('/' + fourth.invoiceId), /unavailable|not found/i);
+    assert.equal((await frontend.invoiceApi('/workspace', is)).nextNumber, 'INV-005', 'deleting cancelled invoices does not reuse issued numbers');
+    frontend.clearInvoiceSessions();
+    assert.equal(frontend.cachedInvoiceSession(issuerBridge.address), '', 'disconnect clears the local wallet session');
   } finally {
     if (server) await new Promise(r => server.close(r)); await mongoose.disconnect();
     if (mongo && mongo.exitCode === null) { const ended = new Promise(r => mongo.once('exit', r)); mongo.kill('SIGTERM'); await ended; }
